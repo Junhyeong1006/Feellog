@@ -1,0 +1,44 @@
+# 웹(PWA)을 Cloudflare Pages로 배포하는 CI.
+#
+# ▶ 권장: 이 워크플로 대신 Cloudflare 대시보드의 "Connect to Git"을 쓰면
+#   시크릿 없이 푸시마다 자동 빌드된다(빌드 명령/출력 디렉터리만 설정).
+#     - Build command:        npm ci && npx expo export -p web
+#     - Build output dir:     dist
+#     - Environment variable:  EXPO_PUBLIC_SUPABASE_URL / EXPO_PUBLIC_SUPABASE_ANON_KEY
+#
+# ▶ 이 GitHub Actions 경로를 쓰려면 리포 Settings > Secrets 에 아래를 추가:
+#     CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID
+#     EXPO_PUBLIC_SUPABASE_URL, EXPO_PUBLIC_SUPABASE_ANON_KEY
+#   그리고 Cloudflare에 'feellog' Pages 프로젝트를 미리 생성.
+name: web-deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Export web (정적 PWA)
+        run: npx expo export -p web
+        env:
+          EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
+          EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
+
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy dist --project-name=feellog
