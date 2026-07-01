@@ -32,6 +32,16 @@ function redirectTo(): string | undefined {
 }
 
 /**
+ * provider별 요청 스코프.
+ * 카카오: 이메일(account_email)은 요청하지 않는다(최소수집 + 이메일 미저장 설계).
+ *   → 닉네임/프로필사진만 요청. 카카오 앱 [동의항목]에도 이 둘만 켜두면 KOE205가 안 난다.
+ * 구글/애플: 기본 스코프 사용(표준이라 별도 설정 불필요).
+ */
+const PROVIDER_SCOPES: Partial<Record<OAuthProvider, string>> = {
+  kakao: 'profile_nickname profile_image',
+};
+
+/**
  * 소셜 로그인 시작. 성공 시 onAuthStateChange가 세션을 전파한다.
  * 반환값: 로그인 창까지 정상 진행되면 true(웹은 리다이렉트되므로 반환 전 페이지 이탈).
  */
@@ -45,6 +55,7 @@ export async function signInWithProvider(provider: OAuthProvider): Promise<void>
     provider,
     options: {
       redirectTo: to,
+      scopes: PROVIDER_SCOPES[provider],
       // 네이티브는 우리가 직접 브라우저를 연다(자동 리다이렉트 금지)
       skipBrowserRedirect: Platform.OS !== 'web',
     },
