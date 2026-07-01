@@ -14,6 +14,7 @@ import { useTaste } from '@/hooks/useTaste';
 import { colors, radius, spacing } from '@/tokens';
 import { AppText, Badge, Button, Card, Screen, ScreenHeader } from '@/ui';
 import { formatDuration, formatIntensity, formatPrice, formatRegion } from '@/utils/format';
+import { openKakaoMapSearch } from '@/utils/maps';
 
 export default function ActivityDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -71,6 +72,7 @@ export default function ActivityDetailScreen() {
   const visual = categoryVisual(activity.category);
   const score = taste ? matchScore(taste.vector, activity.vector) : null;
   const region = formatRegion(activity.regionSido, activity.regionSigungu);
+  const mapQuery = `${activity.partnerName ?? activity.title} ${activity.regionSigungu ?? activity.regionSido ?? ''}`.trim();
 
   const onBook = async () => {
     if (activity.bookingUrl) {
@@ -145,12 +147,16 @@ export default function ActivityDetailScreen() {
             <AppText variant="title">위치</AppText>
             <Card padding="lg" elevation="soft" style={styles.mapCard}>
               <AppText style={styles.mapPin}>📍</AppText>
-              <AppText variant="body" weight="semibold">
+              <AppText variant="body" weight="semibold" center>
                 {region}
               </AppText>
-              <AppText variant="caption" muted>
-                지도 미리보기는 준비 중이에요
-              </AppText>
+              <Button
+                label="카카오맵에서 보기"
+                variant="secondary"
+                onPress={() => openKakaoMapSearch(mapQuery)}
+                style={styles.mapBtn}
+                accessibilityLabel={`${activity.title} 위치를 카카오맵에서 보기`}
+              />
             </Card>
           </View>
 
@@ -249,12 +255,16 @@ const styles = StyleSheet.create({
   },
   mapCard: {
     alignItems: 'center',
-    gap: spacing.xs,
+    gap: spacing.sm,
     paddingVertical: spacing.xl,
   },
   mapPin: {
     fontSize: 32,
     lineHeight: 38,
+  },
+  mapBtn: {
+    alignSelf: 'stretch',
+    marginTop: spacing.xs,
   },
   partner: {
     marginTop: spacing.sm,

@@ -1,19 +1,23 @@
 /**
- * 소셜 로그인 (카카오 / 구글 / 애플). 이메일·비밀번호 없음.
+ * 소셜 로그인. 이메일·비밀번호 없음.
  *
- * 웹: signInWithOAuth가 브라우저를 provider로 리다이렉트 → 콜백 URL에서
- *     detectSessionInUrl + PKCE로 세션 자동 교환.
- * 네이티브: 앱 내 브라우저(WebBrowser)로 열고, 돌아온 콜백 URL의 code를
- *     exchangeCodeForSession으로 교환한다.
+ * - 구글/애플: Supabase signInWithOAuth (웹=리다이렉트, 네이티브=WebBrowser + code 교환).
+ * - 카카오: Supabase 기본 provider가 이메일을 강제 요청(KOE205)하므로 사용하지 않고,
+ *   카카오 OIDC로 직접 id_token을 받아 signInWithIdToken으로 로그인한다(kakaoAuth.ts).
+ *   → 비즈앱·이메일 없이 로그인. 노출 여부는 config(ENABLED_PROVIDERS)로 토글.
  *
  * ⚠️ Supabase 대시보드 Authentication > URL Configuration의 Redirect URLs에
- *    웹 도메인과 네이티브 스킴(feellog://auth-callback)을 등록해야 동작한다.
+ *    웹 도메인과 네이티브 스킴(feellog://auth-callback)을 등록해야 구글/애플이 동작한다.
  */
 import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
 import { Platform } from 'react-native';
 
+import { AuthCancelledError } from './authErrors';
+import { signInWithKakao } from './kakaoAuth';
 import { getSupabase } from './supabase';
+
+export { AuthCancelledError } from './authErrors';
 
 export type OAuthProvider = 'kakao' | 'google' | 'apple';
 
@@ -32,20 +36,15 @@ function redirectTo(): string | undefined {
 }
 
 /**
- * provider별 요청 스코프.
- * 카카오: 이메일(account_email)은 요청하지 않는다(최소수집 + 이메일 미저장 설계).
- *   → 닉네임/프로필사진만 요청. 카카오 앱 [동의항목]에도 이 둘만 켜두면 KOE205가 안 난다.
- * 구글/애플: 기본 스코프 사용(표준이라 별도 설정 불필요).
- */
-const PROVIDER_SCOPES: Partial<Record<OAuthProvider, string>> = {
-  kakao: 'profile_nickname profile_image',
-};
-
-/**
  * 소셜 로그인 시작. 성공 시 onAuthStateChange가 세션을 전파한다.
- * 반환값: 로그인 창까지 정상 진행되면 true(웹은 리다이렉트되므로 반환 전 페이지 이탈).
  */
 export async function signInWithProvider(provider: OAuthProvider): Promise<void> {
+  // 카카오는 OIDC 전용 경로(별도 모듈, 완전 격리 → 제거 쉬움)
+  if (provider === 'kakao') {
+    await signInWithKakao();
+    return;
+  }
+
   const sb = getSupabase();
   if (!sb) throw new Error('Supabase가 설정되지 않았습니다 (.env 확인).');
 
@@ -55,7 +54,6 @@ export async function signInWithProvider(provider: OAuthProvider): Promise<void>
     provider,
     options: {
       redirectTo: to,
-      scopes: PROVIDER_SCOPES[provider],
       // 네이티브는 우리가 직접 브라우저를 연다(자동 리다이렉트 금지)
       skipBrowserRedirect: Platform.OS !== 'web',
     },
@@ -69,7 +67,6 @@ export async function signInWithProvider(provider: OAuthProvider): Promise<void>
 
   const result = await WebBrowser.openAuthSessionAsync(data.url, to);
   if (result.type !== 'success' || !result.url) {
-    // 사용자가 취소했거나 실패 — 조용히 종료(호출부에서 처리)
     throw new AuthCancelledError();
   }
 
@@ -78,14 +75,6 @@ export async function signInWithProvider(provider: OAuthProvider): Promise<void>
 
   const { error: exchangeError } = await sb.auth.exchangeCodeForSession(code);
   if (exchangeError) throw exchangeError;
-}
-
-/** 사용자가 로그인 창을 닫아 취소한 경우 */
-export class AuthCancelledError extends Error {
-  constructor() {
-    super('로그인이 취소되었습니다.');
-    this.name = 'AuthCancelledError';
-  }
 }
 
 export async function signOut(): Promise<void> {

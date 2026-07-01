@@ -20,6 +20,7 @@
   "exclude": [
     "node_modules",
     "dist",
-    "infra"
+    "infra",
+    "supabase/functions"
   ]
 }

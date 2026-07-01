@@ -1,10 +1,16 @@
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import * as WebBrowser from 'expo-web-browser';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { AuthProvider } from '@/providers/AuthProvider';
 import { colors } from '@/tokens';
+
+// 소셜 로그인 팝업(웹) 콜백 처리를 위해 앱 로드 시 1회 호출.
+// 리다이렉트된 팝업이 이 호출로 opener에 결과 URL을 postMessage하고 자동으로 닫힌다.
+// (일반 창에서는 무해한 no-op). 네이티브에도 영향 없음.
+WebBrowser.maybeCompleteAuthSession();
 
 /**
  * 루트 레이아웃.
