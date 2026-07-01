@@ -65,3 +65,11 @@ export async function markConsented(): Promise<void> {
 export function displayNameOf(profile: Profile | null): string {
   return profile?.display_name?.trim() || '회원님';
 }
+
+/** 계정 자기삭제(잊혀질 권리). auth.users 삭제 → cascade로 관련 데이터 제거. */
+export async function deleteMyAccount(): Promise<void> {
+  const sb = getSupabase();
+  if (!sb) return;
+  const { error } = await sb.rpc('delete_my_account');
+  if (error) throw error;
+}

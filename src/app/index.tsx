@@ -11,24 +11,32 @@ import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
 import { useAuth } from '@/providers/AuthProvider';
 import { getOnboardingSeen } from '@/state/appFlags';
+import { getLocalTaste } from '@/state/tasteCache';
 import { colors, spacing } from '@/tokens';
 import { AppText, Logo } from '@/ui';
 
 export default function BootDecider() {
   const { loading, session, guest, profile, profileLoading } = useAuth();
   const [onboardingSeen, setOnboardingSeen] = useState<boolean | null>(null);
+  const [hasLocalTaste, setHasLocalTaste] = useState<boolean | null>(null);
 
   useEffect(() => {
     let mounted = true;
-    getOnboardingSeen().then((v) => {
-      if (mounted) setOnboardingSeen(v);
+    Promise.all([getOnboardingSeen(), getLocalTaste()]).then(([seen, taste]) => {
+      if (!mounted) return;
+      setOnboardingSeen(seen);
+      setHasLocalTaste(taste != null);
     });
     return () => {
       mounted = false;
     };
   }, []);
 
-  const booting = loading || onboardingSeen === null || (Boolean(session) && profileLoading);
+  const booting =
+    loading ||
+    onboardingSeen === null ||
+    hasLocalTaste === null ||
+    (Boolean(session) && profileLoading);
   if (booting) return <Splash />;
 
   // 로그인도 게스트도 아니면 → 로그인
@@ -44,8 +52,8 @@ export default function BootDecider() {
     return <Redirect href="/home" />;
   }
 
-  // 게스트: 성향테스트 체험으로
-  return <Redirect href="/test" />;
+  // 게스트: 이미 성향테스트를 했으면 홈, 아니면 테스트로
+  return <Redirect href={hasLocalTaste ? '/home' : '/test'} />;
 }
 
 function Splash() {

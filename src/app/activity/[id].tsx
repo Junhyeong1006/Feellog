@@ -62,7 +62,7 @@ export default function ActivityDetailScreen() {
           <AppText variant="body" muted center style={styles.notFoundBody}>
             삭제되었거나 잠시 후 다시 시도해주세요.
           </AppText>
-          <Button label="추천으로 돌아가기" variant="secondary" onPress={() => router.replace('/home')} />
+          <Button label="추천으로 돌아가기" variant="secondary" onPress={() => router.replace('/reco')} />
         </View>
       </Screen>
     );
@@ -94,7 +94,7 @@ export default function ActivityDetailScreen() {
             <AppText variant="bodyLg" weight="semibold" color={colors.success}>
               ✓ 예약이 완료되었어요
             </AppText>
-            <Button label="추천으로 돌아가기" variant="secondary" onPress={() => router.replace('/home')} />
+            <Button label="추천으로 돌아가기" variant="secondary" onPress={() => router.replace('/reco')} />
           </View>
         ) : (
           <Button label="예약하기" onPress={onBook} />

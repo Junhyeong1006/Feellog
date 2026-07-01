@@ -1,7 +1,6 @@
 /**
- * 홈 — 오늘의 추천 카드 피드.
+ * 추천 탭 — 오늘의 추천 카드 피드.
  * 취향 벡터로 활동을 정렬해 한 장씩 보여주고, [좋아요]/[관심없어요]로 피드백을 준다.
- * (다음 단계에서 하단 탭·커뮤니티·마이가 붙는다)
  */
 import { router } from 'expo-router';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
@@ -13,14 +12,14 @@ import { useAuth } from '@/providers/AuthProvider';
 import { colors, radius, spacing } from '@/tokens';
 import { AppText, Button, Screen } from '@/ui';
 
-export default function HomeScreen() {
+export default function RecoScreen() {
   const { profile, session, guest } = useAuth();
   const { loading, current, total, index, react, reset } = useReco();
   const name = session ? displayNameOf(profile) : '회원님';
 
   if (loading) {
     return (
-      <Screen>
+      <Screen edges={['top']}>
         <View style={styles.center}>
           <ActivityIndicator color={colors.primary} />
           <AppText variant="body" muted style={styles.loadingText}>
@@ -33,6 +32,7 @@ export default function HomeScreen() {
 
   return (
     <Screen
+      edges={['top']}
       scroll
       contentStyle={styles.content}
       footer={

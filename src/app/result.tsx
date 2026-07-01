@@ -44,7 +44,7 @@ export default function ResultScreen() {
       contentStyle={styles.content}
       footer={
         <View style={styles.footer}>
-          <Button label="활동 추천 받기" onPress={() => router.replace('/home')} />
+          <Button label="활동 추천 받기" onPress={() => router.replace('/reco')} />
           <Button
             label="다시 검사하기"
             variant="ghost"
