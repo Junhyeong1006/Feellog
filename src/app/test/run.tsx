@@ -8,8 +8,10 @@ import { useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { saveDiagnosis } from '@/api/diagnosis';
+import type { TasteSnapshot } from '@/api/tasteProfiles';
 import { diagnose, QUESTIONS, type Answer, type AnswerValue } from '@/core';
 import { useAuth } from '@/providers/AuthProvider';
+import { setLocalTaste } from '@/state/tasteCache';
 import { colors, palette, radius, shadows, spacing } from '@/tokens';
 import { AppText, ProgressBar, Screen, ScreenHeader } from '@/ui';
 
@@ -32,6 +34,19 @@ export default function TestRunScreen() {
     submitting.current = true;
     const answers = buildAnswers(finalValues);
     const result = diagnose(answers);
+
+    // 로컬 캐시에 항상 저장(게스트/오프라인도 추천·피드백 동작). base=cur로 시작.
+    const snapshot: TasteSnapshot = {
+      vector: result.vector,
+      base: result.vector,
+      mainType: result.mainType,
+      subTrait: result.subTrait,
+      trendScore: result.trendScore,
+      recoveryScore: result.recoveryScore,
+      feedbackCount: 0,
+    };
+    await setLocalTaste(snapshot);
+
     try {
       if (session) {
         await saveDiagnosis(answers, result);

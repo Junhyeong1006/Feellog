@@ -240,7 +240,7 @@ create policy "test self select" on public.test_responses for select using (auth
 -- activities: 활성 카탈로그만 공개 읽기. 쓰기 정책 없음 → service_role(관리자)만.
 create policy "activities public read" on public.activities for select using (is_active = true and deleted_at is null);
 
--- reactions: 본인 것만 (insert/select/delete, update 없음 → 변경은 delete 후 재insert 또는 upsert)
+-- reactions: 본인 것만 (insert/select/delete, update 정책 없음 → 반응 변경은 반드시 delete 후 재insert)
 create policy "reactions self insert" on public.reactions for insert with check (auth.uid() = user_id);
 create policy "reactions self select" on public.reactions for select using (auth.uid() = user_id);
 create policy "reactions self delete" on public.reactions for delete using (auth.uid() = user_id);

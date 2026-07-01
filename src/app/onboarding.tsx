@@ -41,7 +41,7 @@ const SLIDES: Slide[] = [
   },
   {
     emoji: '📖',
-    accent: '#FBE4DB',
+    accent: palette.coralTint,
     title: '나만의 속도로\n즐기는 기록',
     body: '차곡차곡 나만의 추억을 만들어요',
   },

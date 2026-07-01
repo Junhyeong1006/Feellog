@@ -14,6 +14,8 @@ export const palette = {
 
   // 포인트
   coral: '#F4A088',
+  coralTint: '#FBE4DB', // 연한 코랄(배지/밴드 배경)
+  coralDeep: '#C7623F', // 진한 코랄(코랄 위 텍스트)
   mint: '#DCF1E7',
   mintStrong: '#3FB37F',
   mintDeep: '#2F8A5F',

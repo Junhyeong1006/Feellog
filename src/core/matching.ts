@@ -4,7 +4,7 @@
  */
 import { AXES, AXIS_WEIGHTS } from './config';
 import { weightedDistance } from './classify';
-import type { Activity, AxisVector, MatchResult, RecoFilter } from './types';
+import type { Activity, AxisVector, RecoFilter } from './types';
 
 /** 가중 유클리드 거리의 이론적 최대값 (각 축 최대 200 차이) */
 const MAX_DISTANCE = 200 * Math.sqrt(AXES.reduce((s, a) => s + AXIS_WEIGHTS[a], 0));
@@ -45,12 +45,15 @@ export function passesFilter(activity: Activity, filter?: RecoFilter): boolean {
   return true;
 }
 
-/** 추천: 필터 → 점수 → 내림차순 정렬. limit로 상위 N개. */
-export function recommend(
+/**
+ * 추천: 필터 → 점수 → 내림차순 정렬. limit로 상위 N개.
+ * 제네릭 T로 입력 활동의 확장 필드(제목/이미지 등)를 결과까지 그대로 보존한다.
+ */
+export function recommend<T extends Activity>(
   user: AxisVector,
-  activities: Activity[],
+  activities: T[],
   opts?: { filter?: RecoFilter; limit?: number },
-): MatchResult[] {
+): { activity: T; score: number }[] {
   const results = activities
     .filter((a) => passesFilter(a, opts?.filter))
     .map((activity) => ({ activity, score: matchScore(user, activity.vector) }))

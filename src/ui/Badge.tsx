@@ -19,7 +19,7 @@ interface ToneStyle {
 const TONES: Record<BadgeTone, ToneStyle> = {
   primary: { bg: colors.primaryTint, fg: colors.primaryPressed },
   mint: { bg: palette.mint, fg: palette.mintDeep },
-  coral: { bg: '#FBE4DB', fg: '#C7623F' },
+  coral: { bg: palette.coralTint, fg: palette.coralDeep },
   neutral: { bg: colors.surfaceInset, fg: colors.textSecondary },
   success: { bg: palette.mint, fg: palette.mintDeep },
 };
