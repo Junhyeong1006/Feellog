@@ -2,7 +2,16 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { isSupabaseConfigured } from '@/api/supabase';
-import { colors, MAX_CONTENT_WIDTH, MIN_TOUCH_SIZE, radius, spacing, typography } from '@/tokens';
+import {
+  colors,
+  fontFamily,
+  MAX_CONTENT_WIDTH,
+  MIN_TOUCH_SIZE,
+  radius,
+  shadows,
+  spacing,
+  typography,
+} from '@/tokens';
 
 /**
  * Phase 0 환영(Hello World) 화면.
@@ -74,11 +83,12 @@ const styles = StyleSheet.create({
     width: 96,
     height: 96,
     borderRadius: radius.pill,
-    backgroundColor: colors.accentPeri,
+    backgroundColor: colors.primaryTint,
     marginBottom: spacing.sm,
   },
   logo: {
     ...typography.display,
+    fontFamily: fontFamily.logo,
     color: colors.primary,
   },
   tagline: {
@@ -89,10 +99,9 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
     padding: spacing.lg,
     gap: spacing.sm,
+    ...shadows.card,
   },
   cardTitle: {
     ...typography.title,

@@ -1,67 +1,71 @@
 /**
- * Feellog 디자인 토큰 — 컬러
+ * Feellog 디자인 토큰 — 컬러 ("따뜻한 종이" 팔레트)
  *
- * 기획 스크린샷(로그인/온보딩/결과 화면)의 파스텔·친근 스타일에서 추출한 근사 팔레트.
- * 웹·앱 공통으로 사용한다. 다크모드는 Phase 2에서 dark 팔레트를 추가한다
- * (지금은 라이트 + 고대비 토글만 지원하기로 비용 검토에서 확정).
- *
- * 시니어 접근성: 본문 텍스트는 배경 대비 WCAG AA(4.5:1) 이상을 목표로 한다.
+ * 출처: 기획 프로토타입(docs/필로그 프로토타입). 크림/베이지 배경 + 콘플라워 블루 +
+ * 코랄/민트 포인트. 웹·앱 공통. 다크모드는 Phase 2(라이트 + 고대비만 먼저).
+ * 시니어 접근성: 본문 텍스트는 배경 대비 WCAG AA 이상을 목표로 한다.
  */
 
 export const palette = {
-  // 브랜드 블루 (로고 'Feellog', 주 버튼 '입장하기')
-  blue50: '#EEF3FF',
-  blue100: '#D9E3FD',
-  blue300: '#A9B8F0', // 온보딩 일러스트 원형(페리윙클)
+  // 브랜드 블루
   blue500: '#5B8DEF', // primary
-  blue600: '#3F6FD6', // primary pressed
-  blue700: '#2F58B5',
+  blue600: '#3F6FD6', // pressed
+  blueTint: '#EEF3FF',
 
-  // 포인트: 코랄(리본)·민트(블록)
-  coral400: '#F4A088',
-  mint400: '#A8E0C5',
+  // 포인트
+  coral: '#F4A088',
+  mint: '#DCF1E7',
+  mintStrong: '#3FB37F',
+  mintDeep: '#2F8A5F',
 
-  // 중립
-  white: '#FFFFFF',
-  gray50: '#F5F6F8',
-  gray100: '#EEF0F3',
-  gray200: '#E5E7EB',
-  gray400: '#9AA0AE',
+  // 종이(크림/베이지)
+  paper: '#FAF8F3', // 앱 배경
+  cream: '#F3F1EA', // 크림 인셋 표면
+  cream2: '#F0EEE6',
+  beige: '#EDE7DC',
+  border: '#E7E1D6',
+
+  // 잉크/그레이
+  ink: '#2D2D2D',
   gray600: '#5A6072',
-  gray900: '#1F2430',
+  gray500: '#7A8091',
+  gray400: '#8A8F9C',
+  gray300: '#9AA0AE',
+  gray200: '#B4B8C2',
+  white: '#FFFFFF',
 
   // 상태
-  red500: '#E25C5C', // 에러(로그인 인라인 에러)
-  green500: '#3FB37F',
+  red500: '#E25C5C',
   amber500: '#E9A23B',
 } as const;
 
-/** 의미 기반 컬러(컴포넌트는 이걸 참조한다) */
+/** 의미 기반 컬러(컴포넌트는 이걸 참조. 하드코딩 금지) */
 export const colors = {
   primary: palette.blue500,
   primaryPressed: palette.blue600,
-  primaryTint: palette.blue50,
-  accentPeri: palette.blue300,
-  accentCoral: palette.coral400,
-  accentMint: palette.mint400,
+  primaryTint: palette.blueTint,
+  accentCoral: palette.coral,
+  accentMint: palette.mint,
+  mint: palette.mintStrong,
 
-  background: palette.white,
-  surface: palette.gray50,
-  surfaceAlt: palette.gray100,
-  border: palette.gray200,
+  background: palette.paper, // 크림 "종이" 배경
+  surface: palette.white, // 흰 카드(부드러운 그림자)
+  surfaceInset: palette.cream, // 크림 인셋(입력/구획)
+  surfaceAlt: palette.cream2,
+  border: palette.border,
 
-  textPrimary: palette.gray900,
+  textPrimary: palette.ink,
   textSecondary: palette.gray600,
   textMuted: palette.gray400,
   onPrimary: palette.white,
 
   danger: palette.red500,
-  success: palette.green500,
+  success: palette.mintStrong,
   warning: palette.amber500,
 
   // 보조 버튼('둘러보기')
-  secondaryBg: palette.gray100,
-  secondaryText: palette.gray900,
+  secondaryBg: palette.cream2,
+  secondaryText: palette.ink,
 } as const;
 
 export type ColorToken = keyof typeof colors;

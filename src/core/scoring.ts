@@ -1,46 +1,90 @@
 /**
- * 추천 엔진 코어 — 순수 TypeScript (React Native/DOM 의존 없음)
- *
- * 이 폴더(src/core)는 RN/웹 어디에도 의존하지 않는 순수 도메인 로직만 둔다.
- * 덕분에 Vitest로 노드에서 빠르게 단위 테스트할 수 있고, 클라이언트와
- * Supabase Edge Function 양쪽에서 그대로 재사용한다.
- *
- * Phase 0에서는 5축 좌표계의 기초 함수(클램프/정규화)만 구현한다.
- * Phase 1에서 12문항 채점 → 5축 점수 → 6유형 분류 → 활동 매칭을 여기에 쌓는다.
- * (상세 수식은 docs/feellog-개발계획서.md 2장 참조)
+ * 채점 — 문항 답변 → 5축 점수(-100~100) + 보조성향 점수(0~100). 순수 TS.
+ * 수식: 축별 관련 문항의 (dir × 답변)을 합산 후 -100~100으로 정규화.
+ * (개발계획서 2.1 참조)
  */
+import { AXES } from './config';
+import { QUESTIONS } from './questions';
+import type { Answer, Axis, AxisVector } from './types';
 
-/** 5개 핵심 축. 모든 사용자/활동 벡터는 이 순서를 따른다. */
-export const AXES = ['rhythm', 'relation', 'experience', 'participation', 'reward'] as const;
-export type Axis = (typeof AXES)[number];
-
-/** 축 점수 벡터: 각 축 -100 ~ +100 */
-export type AxisVector = Record<Axis, number>;
-
-/** 값을 [min, max] 범위로 자른다. */
+/** 값을 [min, max]로 자른다 */
 export function clamp(value: number, min: number, max: number): number {
-  if (value < min) return min;
-  if (value > max) return max;
-  return value;
+  return value < min ? min : value > max ? max : value;
 }
 
-/** 한 축 점수를 표준 범위(-100 ~ +100)로 자른다. */
+/** 한 축 점수를 -100~100으로 자른다 */
 export function clampAxis(value: number): number {
   return clamp(value, -100, 100);
 }
 
+/** 중립(0) 벡터 */
+export function zeroVector(): AxisVector {
+  return { rhythm: 0, relation: 0, experience: 0, participation: 0, reward: 0 };
+}
+
 /**
- * 문항 원점수 합을 -100 ~ +100 스케일로 정규화한다.
- * 한 축에 k개 문항이 있고 각 문항이 -2~+2이면 원점수 범위는 [-2k, +2k]이므로
- * (rawSum / (2 * questionCount)) * 100 으로 환산한다.
+ * 문항 원점수 합(rawSum, 범위 -2·count ~ +2·count)을 -100~100으로 정규화.
+ * (rawSum / (2·count)) × 100. 정수 반올림(DB smallint).
  */
 export function normalizeAxisScore(rawSum: number, questionCount: number): number {
   if (questionCount <= 0) return 0;
-  const scaled = (rawSum / (2 * questionCount)) * 100;
-  return clampAxis(scaled);
+  return clampAxis(Math.round((rawSum / (2 * questionCount)) * 100));
 }
 
-/** 빈(중립) 축 벡터 */
-export function zeroVector(): AxisVector {
-  return { rhythm: 0, relation: 0, experience: 0, participation: 0, reward: 0 };
+/** 보조성향 원점수(범위 -2·count ~ +2·count)를 0~100으로 정규화(중립=50) */
+export function normalizeAuxScore(rawSum: number, questionCount: number): number {
+  if (questionCount <= 0) return 0;
+  const scaled = ((rawSum + 2 * questionCount) / (4 * questionCount)) * 100;
+  return Math.round(clamp(scaled, 0, 100));
+}
+
+function answerMap(answers: Answer[]): Map<number, number> {
+  const m = new Map<number, number>();
+  for (const a of answers) m.set(a.q, a.value);
+  return m;
+}
+
+/** 답변 → 5축 점수 벡터(-100~100) */
+export function scoreAxes(answers: Answer[]): AxisVector {
+  const am = answerMap(answers);
+  const acc: Record<Axis, { sum: number; count: number }> = {
+    rhythm: { sum: 0, count: 0 },
+    relation: { sum: 0, count: 0 },
+    experience: { sum: 0, count: 0 },
+    participation: { sum: 0, count: 0 },
+    reward: { sum: 0, count: 0 },
+  };
+  for (const q of QUESTIONS) {
+    if (!q.axis) continue;
+    const v = am.get(q.id) ?? 0;
+    acc[q.axis].sum += (q.dir ?? 1) * v;
+    acc[q.axis].count += 1;
+  }
+  const out = zeroVector();
+  for (const axis of AXES) out[axis] = normalizeAxisScore(acc[axis].sum, acc[axis].count);
+  return out;
+}
+
+/** 답변 → 보조성향 점수(0~100) */
+export function scoreAux(answers: Answer[]): { trendScore: number; recoveryScore: number } {
+  const am = answerMap(answers);
+  let trendSum = 0,
+    trendCount = 0,
+    recSum = 0,
+    recCount = 0;
+  for (const q of QUESTIONS) {
+    const v = am.get(q.id) ?? 0;
+    if (q.trendDir) {
+      trendSum += q.trendDir * v;
+      trendCount += 1;
+    }
+    if (q.recoveryDir) {
+      recSum += q.recoveryDir * v;
+      recCount += 1;
+    }
+  }
+  return {
+    trendScore: normalizeAuxScore(trendSum, trendCount),
+    recoveryScore: normalizeAuxScore(recSum, recCount),
+  };
 }
