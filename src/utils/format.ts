@@ -38,3 +38,19 @@ export function formatIntensity(intensity?: number | null): string {
   const clamped = Math.max(1, Math.min(5, intensity));
   return INTENSITY_LABEL[clamped] ?? '보통';
 }
+
+/** ISO 시각 → 상대 시간("방금 전 / N분 전 / N시간 전 / N일 전 / YYYY.MM.DD") */
+export function formatTimeAgo(iso: string): string {
+  const then = new Date(iso).getTime();
+  if (Number.isNaN(then)) return '';
+  const diffMin = Math.floor((Date.now() - then) / 60000);
+  if (diffMin < 1) return '방금 전';
+  if (diffMin < 60) return `${diffMin}분 전`;
+  const diffHr = Math.floor(diffMin / 60);
+  if (diffHr < 24) return `${diffHr}시간 전`;
+  const diffDay = Math.floor(diffHr / 24);
+  if (diffDay < 7) return `${diffDay}일 전`;
+  const d = new Date(iso);
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}.${p(d.getMonth() + 1)}.${p(d.getDate())}`;
+}

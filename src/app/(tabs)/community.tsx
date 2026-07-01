@@ -1,14 +1,16 @@
 /**
- * 커뮤니티 탭 — 이웃들의 취미 기록(미리보기). 필터: 전체/우리 유형/인기/사진.
- * 좋아요는 로컬 토글(세션 한정). 글쓰기/댓글·서버 연동은 다음 단계.
+ * 커뮤니티 탭 — 이웃들의 취미 기록. 필터: 전체/우리 유형/인기/사진.
+ * 실제 글(community_posts)을 보여주고, 글이 없으면 샘플로 폴백. 좋아요/글쓰기/내 글 삭제 지원.
  */
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 
+import type { Post } from '@/api/community';
 import { PostCard } from '@/components/PostCard';
-import { SAMPLE_POSTS, type CommunityPost } from '@/data/samplePosts';
+import { useCommunity } from '@/hooks/useCommunity';
 import { useTaste } from '@/hooks/useTaste';
+import { useAuth } from '@/providers/AuthProvider';
 import { colors, MIN_TOUCH_SIZE, radius, spacing } from '@/tokens';
 import { AppText, Button, Screen } from '@/ui';
 
@@ -22,34 +24,27 @@ const FILTERS: { key: FilterKey; label: string }[] = [
 ];
 
 export default function CommunityScreen() {
+  const { session } = useAuth();
   const { taste } = useTaste();
   const myType = taste?.mainType ?? null;
+  const myId = session?.user.id ?? null;
+  const { posts, loading, isLiked, likeCountOf, toggleLike, removePost } = useCommunity();
   const [filter, setFilter] = useState<FilterKey>('all');
-  const [liked, setLiked] = useState<Set<string>>(new Set());
 
-  const likeCountOf = (post: CommunityPost) => post.likeCount + (liked.has(post.id) ? 1 : 0);
+  const filtered = useMemo(() => {
+    if (filter === 'mine') return myType ? posts.filter((p) => p.authorType === myType) : [];
+    if (filter === 'photo') return posts.filter((p) => p.hasPhoto);
+    // 화면에 보이는 카운트(likeCountOf)로 정렬 → 표시 순서와 표시 숫자가 어긋나지 않게.
+    if (filter === 'popular') return [...posts].sort((a, b) => likeCountOf(b) - likeCountOf(a));
+    return posts;
+  }, [posts, filter, myType, likeCountOf]);
 
-  const toggleLike = (id: string) =>
-    setLiked((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
+  const canDelete = (post: Post) => Boolean(myId) && !post.isSample && post.userId === myId;
 
-  const posts = useMemo(() => {
-    if (filter === 'mine') {
-      return myType ? SAMPLE_POSTS.filter((p) => p.authorType === myType) : [];
-    }
-    if (filter === 'photo') {
-      return SAMPLE_POSTS.filter((p) => p.hasPhoto);
-    }
-    if (filter === 'popular') {
-      // 기본 좋아요 수로 정렬(로컬 토글로 손 밑에서 순서가 바뀌지 않게).
-      return [...SAMPLE_POSTS].sort((a, b) => b.likeCount - a.likeCount);
-    }
-    return SAMPLE_POSTS;
-  }, [filter, myType]);
+  const onWrite = () => {
+    if (session) router.push('/community/compose');
+    else router.push('/login');
+  };
 
   const showMineEmpty = filter === 'mine' && !myType;
 
@@ -57,9 +52,7 @@ export default function CommunityScreen() {
     <Screen edges={['top']} scroll contentStyle={styles.content}>
       <View style={styles.header}>
         <AppText variant="h2">커뮤니티</AppText>
-        <AppText variant="caption" muted>
-          미리보기 · 글쓰기는 곧 열려요
-        </AppText>
+        <Button label="글쓰기" size="md" fullWidth={false} onPress={onWrite} />
       </View>
 
       <View style={styles.filters}>
@@ -85,22 +78,33 @@ export default function CommunityScreen() {
         })}
       </View>
 
-      {showMineEmpty ? (
+      {loading && posts.length === 0 ? (
+        <View style={styles.loading}>
+          <ActivityIndicator color={colors.primary} />
+        </View>
+      ) : showMineEmpty ? (
         <View style={styles.empty}>
           <AppText variant="body" muted center style={styles.emptyText}>
             성향 테스트를 하면{'\n'}같은 유형 이웃들의 글을 볼 수 있어요.
           </AppText>
           <Button label="성향 테스트 하기" variant="secondary" onPress={() => router.push('/test')} />
         </View>
+      ) : filtered.length === 0 ? (
+        <View style={styles.empty}>
+          <AppText variant="body" muted center style={styles.emptyText}>
+            아직 글이 없어요.{'\n'}첫 이야기를 남겨보세요.
+          </AppText>
+        </View>
       ) : (
         <View style={styles.list}>
-          {posts.map((post) => (
+          {filtered.map((post) => (
             <PostCard
               key={post.id}
               post={post}
-              liked={liked.has(post.id)}
+              liked={isLiked(post.id)}
               likeCount={likeCountOf(post)}
-              onToggleLike={() => toggleLike(post.id)}
+              onToggleLike={() => toggleLike(post)}
+              onDelete={canDelete(post) ? () => removePost(post.id) : undefined}
             />
           ))}
         </View>
@@ -116,7 +120,9 @@ const styles = StyleSheet.create({
     gap: spacing.lg,
   },
   header: {
-    gap: spacing.xs,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   filters: {
     flexDirection: 'row',
@@ -138,6 +144,9 @@ const styles = StyleSheet.create({
   },
   list: {
     gap: spacing.base,
+  },
+  loading: {
+    paddingVertical: spacing.xxl,
   },
   empty: {
     alignItems: 'center',

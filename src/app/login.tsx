@@ -1,5 +1,6 @@
 /**
- * 로그인 — 소셜 전용(카카오/구글/Apple). 이메일·비밀번호 없음.
+ * 로그인 — 소셜 전용. 노출 provider는 config(ENABLED_PROVIDERS)로 토글.
+ * (현재 구글·애플; 카카오는 비즈앱/OIDC 이슈 해결 후 config에 다시 추가)
  * '둘러보기'로 비로그인 체험도 가능(결과 저장은 로그인 후).
  * 하단 문구로 약관/개인정보 동의를 고지하고 전문 링크를 제공.
  */
@@ -8,11 +9,18 @@ import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { AuthCancelledError, signInWithProvider, type OAuthProvider } from '@/api/auth';
+import { ENABLED_PROVIDERS } from '@/config/auth';
 import { useAuth } from '@/providers/AuthProvider';
 import { colors, spacing } from '@/tokens';
-import { AppText, Button, Logo, Screen } from '@/ui';
+import { AppText, Button, Logo, Screen, type ButtonVariant } from '@/ui';
 
 type Pending = OAuthProvider | 'guest' | null;
+
+const PROVIDER_BUTTON: Record<OAuthProvider, { label: string; variant: ButtonVariant }> = {
+  kakao: { label: '카카오로 시작하기', variant: 'kakao' },
+  google: { label: '구글로 시작하기', variant: 'google' },
+  apple: { label: 'Apple로 시작하기', variant: 'apple' },
+};
 
 export default function LoginScreen() {
   const { enterGuest, configured } = useAuth();
@@ -72,30 +80,20 @@ export default function LoginScreen() {
           </AppText>
         )}
 
-        <Button
-          label="카카오로 시작하기"
-          variant="kakao"
-          onPress={() => onSocial('kakao')}
-          loading={pending === 'kakao'}
-          disabled={!configured || (pending !== null && pending !== 'kakao')}
-          accessibilityLabel="카카오 계정으로 시작하기"
-        />
-        <Button
-          label="구글로 시작하기"
-          variant="google"
-          onPress={() => onSocial('google')}
-          loading={pending === 'google'}
-          disabled={!configured || (pending !== null && pending !== 'google')}
-          accessibilityLabel="구글 계정으로 시작하기"
-        />
-        <Button
-          label="Apple로 시작하기"
-          variant="apple"
-          onPress={() => onSocial('apple')}
-          loading={pending === 'apple'}
-          disabled={!configured || (pending !== null && pending !== 'apple')}
-          accessibilityLabel="Apple 계정으로 시작하기"
-        />
+        {ENABLED_PROVIDERS.map((provider) => {
+          const meta = PROVIDER_BUTTON[provider];
+          return (
+            <Button
+              key={provider}
+              label={meta.label}
+              variant={meta.variant}
+              onPress={() => onSocial(provider)}
+              loading={pending === provider}
+              disabled={!configured || (pending !== null && pending !== provider)}
+              accessibilityLabel={meta.label}
+            />
+          );
+        })}
 
         {error != null && (
           <AppText variant="caption" color={colors.danger} center style={styles.notice}>

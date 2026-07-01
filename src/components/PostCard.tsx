@@ -1,44 +1,53 @@
 /**
- * PostCard — 커뮤니티 글 카드. 작성자(아바타 이니셜 + 유형 배지 + 시간) + 본문 +
- * (사진글) 카테고리 이모지 밴드 + 좋아요/댓글 수. 좋아요는 부모가 제어(로컬 토글).
+ * PostCard — 커뮤니티 글 카드. 작성자(아바타/유형 배지/시간) + 본문 +
+ * (사진글) 카테고리 이모지 밴드 + 좋아요/댓글 수. 좋아요는 부모가 제어.
+ * onDelete가 있으면 본인 글 → 인라인 확인 후 삭제.
  */
+import { Image } from 'expo-image';
+import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
+import type { Post } from '@/api/community';
 import { TYPE_META } from '@/core';
-import type { CommunityPost } from '@/data/samplePosts';
 import { colors, radius, spacing } from '@/tokens';
 import { AppText, Badge, Card } from '@/ui';
 
 import { categoryVisual } from './categoryVisual';
 
 export interface PostCardProps {
-  post: CommunityPost;
+  post: Post;
   liked: boolean;
   likeCount: number;
   onToggleLike: () => void;
+  onDelete?: () => void;
 }
 
-export function PostCard({ post, liked, likeCount, onToggleLike }: PostCardProps) {
+export function PostCard({ post, liked, likeCount, onToggleLike, onDelete }: PostCardProps) {
   const visual = categoryVisual(post.category);
-  const typeLabel = TYPE_META[post.authorType].label;
+  const typeLabel = post.authorType ? TYPE_META[post.authorType].label : null;
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   return (
     <Card padding="lg" elevation="soft">
       <View style={styles.authorRow}>
         <View style={styles.avatar}>
-          <AppText variant="body" weight="bold" color={colors.primary}>
-            {post.authorName.charAt(0)}
-          </AppText>
+          {post.authorAvatarUrl ? (
+            <Image source={{ uri: post.authorAvatarUrl }} style={styles.avatarImg} contentFit="cover" />
+          ) : (
+            <AppText variant="body" weight="bold" color={colors.primary}>
+              {post.authorName.charAt(0)}
+            </AppText>
+          )}
         </View>
         <View style={styles.authorText}>
           <AppText variant="body" weight="semibold">
             {post.authorName}
           </AppText>
           <AppText variant="caption" muted>
-            {post.timeAgo}
+            {post.createdAtLabel}
           </AppText>
         </View>
-        <Badge label={typeLabel} tone="primary" size="sm" />
+        {typeLabel && <Badge label={typeLabel} tone="primary" size="sm" />}
       </View>
 
       <AppText variant="body" style={styles.body}>
@@ -47,7 +56,11 @@ export function PostCard({ post, liked, likeCount, onToggleLike }: PostCardProps
 
       {post.hasPhoto && (
         <View style={[styles.photo, { backgroundColor: visual.accent }]}>
-          <AppText style={styles.photoEmoji}>{visual.emoji}</AppText>
+          {post.imageUrl ? (
+            <Image source={{ uri: post.imageUrl }} style={styles.photoImg} contentFit="cover" />
+          ) : (
+            <AppText style={styles.photoEmoji}>{visual.emoji}</AppText>
+          )}
         </View>
       )}
 
@@ -72,7 +85,48 @@ export function PostCard({ post, liked, likeCount, onToggleLike }: PostCardProps
             {post.commentCount}
           </AppText>
         </View>
+
+        {onDelete && (
+          <Pressable
+            onPress={() => setConfirmingDelete(true)}
+            accessibilityRole="button"
+            accessibilityLabel="내 글 삭제"
+            hitSlop={8}
+            style={styles.deleteBtn}
+          >
+            <AppText variant="caption" muted>
+              삭제
+            </AppText>
+          </Pressable>
+        )}
       </View>
+
+      {confirmingDelete && (
+        <View style={styles.confirm}>
+          <AppText variant="body" style={styles.confirmText}>
+            이 글을 삭제할까요?
+          </AppText>
+          <View style={styles.confirmActions}>
+            <Pressable onPress={() => setConfirmingDelete(false)} hitSlop={6} style={styles.confirmBtn}>
+              <AppText variant="body" weight="semibold" color={colors.textSecondary}>
+                취소
+              </AppText>
+            </Pressable>
+            <Pressable
+              onPress={() => {
+                setConfirmingDelete(false);
+                onDelete?.();
+              }}
+              hitSlop={6}
+              style={styles.confirmBtn}
+            >
+              <AppText variant="body" weight="semibold" color={colors.danger}>
+                삭제
+              </AppText>
+            </Pressable>
+          </View>
+        </View>
+      )}
     </Card>
   );
 }
@@ -90,6 +144,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primaryTint,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  avatarImg: {
+    width: '100%',
+    height: '100%',
   },
   authorText: {
     flex: 1,
@@ -105,6 +164,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: spacing.md,
+    overflow: 'hidden',
+  },
+  photoImg: {
+    width: '100%',
+    height: '100%',
   },
   photoEmoji: {
     fontSize: 60,
@@ -125,5 +189,32 @@ const styles = StyleSheet.create({
   footerIcon: {
     fontSize: 20,
     lineHeight: 24,
+  },
+  deleteBtn: {
+    marginLeft: 'auto',
+    minHeight: 44,
+    justifyContent: 'center',
+    paddingHorizontal: spacing.sm,
+  },
+  confirm: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: spacing.sm,
+    paddingTop: spacing.sm,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.border,
+  },
+  confirmText: {
+    flex: 1,
+  },
+  confirmActions: {
+    flexDirection: 'row',
+    gap: spacing.lg,
+  },
+  confirmBtn: {
+    minHeight: 44,
+    justifyContent: 'center',
+    paddingHorizontal: spacing.sm,
   },
 });
