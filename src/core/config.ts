@@ -3,10 +3,22 @@
  * 값 출처: 개발계획서 2장 + 기획 스크린샷(6유형 중심값 ×4로 -100~100 통일).
  * 향후 A/B·데이터 누적 시 여기 숫자만 교체한다.
  */
-import type { AxisVector, MainType, SubTrait } from './types';
+import type { Axis, AxisVector, MainType, SubTrait } from './types';
 
 /** 5개 핵심 축 순서 (모든 벡터가 이 순서를 따른다) */
 export const AXES = ['rhythm', 'relation', 'experience', 'participation', 'reward'] as const;
+
+/**
+ * 축 표시 메타 — 결과 차트/설명용. label=축 이름, posLabel=+100 극, negLabel=-100 극.
+ * 부호는 scoring 규칙과 일치(positive=활동적/교류/새로움/만들기/실용·성취).
+ */
+export const AXIS_META: Record<Axis, { label: string; posLabel: string; negLabel: string }> = {
+  rhythm: { label: '활동 리듬', posLabel: '활동적', negLabel: '차분함' },
+  relation: { label: '관계 방식', posLabel: '함께', negLabel: '혼자' },
+  experience: { label: '경험 선호', posLabel: '새로움', negLabel: '익숙함' },
+  participation: { label: '참여 방식', posLabel: '만들기', negLabel: '감상' },
+  reward: { label: '기대 보상', posLabel: '실용·성취', negLabel: '정서·회복' },
+};
 
 /** 축 가중치 (매칭·분류 거리 계산 시) — 개발계획서 2.3.3 */
 export const AXIS_WEIGHTS: AxisVector = {

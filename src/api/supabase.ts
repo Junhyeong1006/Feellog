@@ -39,6 +39,8 @@ export function getSupabase(): SupabaseClient | null {
         autoRefreshToken: true,
         persistSession: true,
         detectSessionInUrl: Platform.OS === 'web',
+        // PKCE: 소셜 로그인 콜백을 웹·네이티브 모두 안전하게 처리(code→session 교환)
+        flowType: 'pkce',
       },
     });
   }

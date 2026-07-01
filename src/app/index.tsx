@@ -1,145 +1,78 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-
-import { isSupabaseConfigured } from '@/api/supabase';
-import {
-  colors,
-  fontFamily,
-  MAX_CONTENT_WIDTH,
-  MIN_TOUCH_SIZE,
-  radius,
-  shadows,
-  spacing,
-  typography,
-} from '@/tokens';
-
 /**
- * Phase 0 환영(Hello World) 화면.
- * 디자인 토큰이 실제로 적용되는지 확인하고, Supabase 환경변수 연결 여부를 표시한다.
- * Phase 1에서 이 자리에 온보딩 → 성향테스트 진입이 들어간다.
+ * 부팅 디사이더 — 세션/게스트/동의/테스트완료 상태를 보고 첫 화면으로 보낸다.
+ *
+ * 흐름:  splash → (로그인/게스트 아니면) 로그인 → (인트로 미열람) 온보딩
+ *        → (로그인+미동의) 동의 게이트 → (로그인+테스트 전) 성향테스트 → 홈
+ *        게스트는 동의/저장 없이 성향테스트로 바로 진입(결과는 로그인 후 저장 유도).
  */
-export default function WelcomeScreen() {
-  const supabaseReady = isSupabaseConfigured();
+import { Redirect } from 'expo-router';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
+import { useAuth } from '@/providers/AuthProvider';
+import { getOnboardingSeen } from '@/state/appFlags';
+import { colors, spacing } from '@/tokens';
+import { AppText, Logo } from '@/ui';
+
+export default function BootDecider() {
+  const { loading, session, guest, profile, profileLoading } = useAuth();
+  const [onboardingSeen, setOnboardingSeen] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+    getOnboardingSeen().then((v) => {
+      if (mounted) setOnboardingSeen(v);
+    });
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const booting = loading || onboardingSeen === null || (Boolean(session) && profileLoading);
+  if (booting) return <Splash />;
+
+  // 로그인도 게스트도 아니면 → 로그인
+  if (!session && !guest) return <Redirect href="/login" />;
+
+  // 인트로 3장(기기당 1회)
+  if (!onboardingSeen) return <Redirect href="/onboarding" />;
+
+  // 로그인 사용자: 동의 게이트 → 성향테스트 → 홈
+  if (session) {
+    if (!profile?.consented_at) return <Redirect href="/consent" />;
+    if (!profile?.onboarded) return <Redirect href="/test" />;
+    return <Redirect href="/home" />;
+  }
+
+  // 게스트: 성향테스트 체험으로
+  return <Redirect href="/test" />;
+}
+
+function Splash() {
   return (
-    <SafeAreaView style={styles.safe}>
-      <View style={styles.container}>
-        <View style={styles.hero}>
-          <View style={styles.logoCircle} />
-          <Text style={styles.logo}>Feellog</Text>
-          <Text style={styles.tagline}>취미를 찾고, 기록하고, 나누는 공간</Text>
-        </View>
-
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Phase 0 · 셋업 완료</Text>
-          <Text style={styles.cardBody}>
-            웹·앱 공용 코드베이스(Expo + react-native-web)와 디자인 토큰이 동작합니다.
-          </Text>
-          <View style={styles.statusRow}>
-            <View
-              style={[
-                styles.dot,
-                { backgroundColor: supabaseReady ? colors.success : colors.warning },
-              ]}
-            />
-            <Text style={styles.statusText}>
-              Supabase 연결: {supabaseReady ? '설정됨' : '미설정 (.env 입력 필요)'}
-            </Text>
-          </View>
-        </View>
-
-        <Pressable
-          style={({ pressed }) => [styles.primaryButton, pressed && styles.primaryButtonPressed]}
-          accessibilityRole="button"
-          accessibilityLabel="둘러보기"
-        >
-          <Text style={styles.primaryButtonText}>둘러보기</Text>
-        </Pressable>
-      </View>
-    </SafeAreaView>
+    <View style={styles.splash}>
+      <Logo size={44} withMark />
+      <AppText variant="bodyLg" muted style={styles.tagline}>
+        취미를 찾고, 기록하고, 나누는 공간
+      </AppText>
+      <ActivityIndicator color={colors.primary} style={styles.spinner} />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: {
+  splash: {
     flex: 1,
-    backgroundColor: colors.background,
-  },
-  container: {
-    flex: 1,
-    width: '100%',
-    maxWidth: MAX_CONTENT_WIDTH,
-    alignSelf: 'center',
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.xxl,
-    justifyContent: 'center',
-    gap: spacing.xxl,
-  },
-  hero: {
     alignItems: 'center',
-    gap: spacing.md,
-  },
-  logoCircle: {
-    width: 96,
-    height: 96,
-    borderRadius: radius.pill,
-    backgroundColor: colors.primaryTint,
-    marginBottom: spacing.sm,
-  },
-  logo: {
-    ...typography.display,
-    fontFamily: fontFamily.logo,
-    color: colors.primary,
+    justifyContent: 'center',
+    backgroundColor: colors.background,
+    gap: spacing.base,
+    padding: spacing.xl,
   },
   tagline: {
-    ...typography.bodyLg,
-    color: colors.textSecondary,
     textAlign: 'center',
   },
-  card: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
-    gap: spacing.sm,
-    ...shadows.card,
-  },
-  cardTitle: {
-    ...typography.title,
-    color: colors.textPrimary,
-  },
-  cardBody: {
-    ...typography.body,
-    color: colors.textSecondary,
-  },
-  statusRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    marginTop: spacing.xs,
-  },
-  dot: {
-    width: 12,
-    height: 12,
-    borderRadius: radius.pill,
-  },
-  statusText: {
-    ...typography.caption,
-    color: colors.textSecondary,
-  },
-  primaryButton: {
-    minHeight: MIN_TOUCH_SIZE,
-    backgroundColor: colors.primary,
-    borderRadius: radius.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: spacing.base,
-  },
-  primaryButtonPressed: {
-    backgroundColor: colors.primaryPressed,
-  },
-  primaryButtonText: {
-    ...typography.bodyLg,
-    color: colors.onPrimary,
-    fontWeight: '600',
+  spinner: {
+    marginTop: spacing.lg,
   },
 });

@@ -39,6 +39,22 @@ export const palette = {
   amber500: '#E9A23B',
 } as const;
 
+/**
+ * 소셜 로그인 브랜드 색 — 외부 브랜드 가이드 고정값(우리 디자인 시스템 밖).
+ * 컴포넌트에서 직접 하드코딩하지 않도록 여기 토큰으로 둔다.
+ */
+export const brand = {
+  kakao: '#FEE500',
+  kakaoText: '#191600',
+  google: '#FFFFFF',
+  googleBorder: '#DADCE0',
+  googleText: '#1F1F1F',
+  apple: '#000000',
+  appleText: '#FFFFFF',
+} as const;
+
+export type BrandToken = keyof typeof brand;
+
 /** 의미 기반 컬러(컴포넌트는 이걸 참조. 하드코딩 금지) */
 export const colors = {
   primary: palette.blue500,
