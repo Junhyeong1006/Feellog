@@ -1,0 +1,11 @@
+name = "feellog-keepalive"
+main = "src/index.ts"
+compatibility_date = "2025-01-01"
+
+# 8시간마다 실행(00:00, 08:00, 16:00 UTC) — 무료 Supabase 7일 자동 일시정지 방지
+[triggers]
+crons = ["0 */8 * * *"]
+
+# 시크릿(대시보드 노출 X)은 아래 명령으로 등록:
+#   npx wrangler secret put SUPABASE_URL
+#   npx wrangler secret put SUPABASE_ANON_KEY
