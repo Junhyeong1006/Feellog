@@ -20,15 +20,19 @@ export const fontWeight = {
   bold: '700',
 } as const;
 
-/** 텍스트 스타일 프리셋 — <Text style={typography.body}> 형태로 사용 */
+/**
+ * 텍스트 스타일 프리셋 — <Text style={typography.body}> 형태로 사용
+ * 큰 제목엔 살짝 음수 자간(한글 대형 타이포 관례 — 토스/당근 벤치마킹),
+ * 캡션은 500으로 크림 배경 가독성 보강. 본문 18px 하한은 절대 유지.
+ */
 export const typography = {
-  display: { fontSize: 40, lineHeight: 48, fontWeight: fontWeight.bold },
-  h1: { fontSize: 30, lineHeight: 40, fontWeight: fontWeight.bold },
-  h2: { fontSize: 24, lineHeight: 34, fontWeight: fontWeight.semibold },
-  title: { fontSize: 20, lineHeight: 28, fontWeight: fontWeight.semibold },
+  display: { fontSize: 34, lineHeight: 44, fontWeight: fontWeight.bold, letterSpacing: -0.4 },
+  h1: { fontSize: 28, lineHeight: 38, fontWeight: fontWeight.bold, letterSpacing: -0.3 },
+  h2: { fontSize: 23, lineHeight: 32, fontWeight: fontWeight.bold, letterSpacing: -0.3 },
+  title: { fontSize: 20, lineHeight: 28, fontWeight: fontWeight.semibold, letterSpacing: -0.2 },
   bodyLg: { fontSize: 19, lineHeight: 29, fontWeight: fontWeight.regular },
   body: { fontSize: 18, lineHeight: 28, fontWeight: fontWeight.regular }, // 시니어 기본 본문
-  caption: { fontSize: 15, lineHeight: 22, fontWeight: fontWeight.regular },
+  caption: { fontSize: 15, lineHeight: 22, fontWeight: fontWeight.medium },
 } as const;
 
 export type TypographyToken = keyof typeof typography;

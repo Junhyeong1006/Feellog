@@ -6,7 +6,7 @@
 import { fetchActivities, type AppActivity } from '@/api/activities';
 import { fetchMyReactions } from '@/api/reactions';
 import { fetchMyTaste, type TasteSnapshot } from '@/api/tasteProfiles';
-import { recommend, zeroVector } from '@/core';
+import { recommend, zeroVector, type RecoFilter } from '@/core';
 import { SAMPLE_ACTIVITIES } from '@/data/sampleActivities';
 import { getLocalTaste } from '@/state/tasteCache';
 
@@ -31,7 +31,8 @@ export function emptyTasteSnapshot(): TasteSnapshot {
 export async function loadRankedItems(
   hasSession: boolean,
   limit?: number,
-): Promise<{ items: RecoItem[]; taste: TasteSnapshot }> {
+  filter?: RecoFilter,
+): Promise<{ items: RecoItem[]; taste: TasteSnapshot; regions: string[] }> {
   let taste: TasteSnapshot | null = null;
   try {
     taste = hasSession ? await fetchMyTaste() : null;
@@ -47,9 +48,14 @@ export async function loadRankedItems(
     hasSession ? fetchMyReactions().catch(() => []) : Promise.resolve([]),
   ]);
 
+  // 지역 필터 옵션(가나다순) — 필터 적용 전 전체 카탈로그 기준
+  const regions = [...new Set(activities.map((a) => a.regionSido).filter((r): r is string => !!r))].sort(
+    (a, b) => a.localeCompare(b, 'ko'),
+  );
+
   const reacted = new Set(reactions.map((r) => r.activityId));
   const candidates = activities.filter((a) => !reacted.has(a.id));
-  const ranked = recommend(snapshot.vector, candidates, limit != null ? { limit } : undefined);
+  const ranked = recommend(snapshot.vector, candidates, { limit, filter });
 
-  return { items: ranked.map((r) => ({ activity: r.activity, score: r.score })), taste: snapshot };
+  return { items: ranked.map((r) => ({ activity: r.activity, score: r.score })), taste: snapshot, regions };
 }

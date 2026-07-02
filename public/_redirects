@@ -1,0 +1,4 @@
+# Cloudflare Pages 리라이트 — 동적 라우트의 딥링크/새로고침 대응.
+# 정적 파일이 먼저 매칭되므로(/community/compose 등) 아래 규칙은 나머지 경로에만 적용된다.
+/activity/* /activity/[id].html 200
+/community/* /community/[id].html 200

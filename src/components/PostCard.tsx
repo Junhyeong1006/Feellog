@@ -20,9 +20,11 @@ export interface PostCardProps {
   likeCount: number;
   onToggleLike: () => void;
   onDelete?: () => void;
+  /** 본문/댓글 영역 탭 → 글 상세(댓글)로 이동. 상세 화면 자신은 넘기지 않는다. */
+  onOpen?: () => void;
 }
 
-export function PostCard({ post, liked, likeCount, onToggleLike, onDelete }: PostCardProps) {
+export function PostCard({ post, liked, likeCount, onToggleLike, onDelete, onOpen }: PostCardProps) {
   const visual = categoryVisual(post.category);
   const typeLabel = post.authorType ? TYPE_META[post.authorType].label : null;
   const [confirmingDelete, setConfirmingDelete] = useState(false);
@@ -34,7 +36,7 @@ export function PostCard({ post, liked, likeCount, onToggleLike, onDelete }: Pos
           {post.authorAvatarUrl ? (
             <Image source={{ uri: post.authorAvatarUrl }} style={styles.avatarImg} contentFit="cover" />
           ) : (
-            <AppText variant="body" weight="bold" color={colors.primary}>
+            <AppText variant="body" weight="bold" color={colors.primaryInk}>
               {post.authorName.charAt(0)}
             </AppText>
           )}
@@ -50,9 +52,17 @@ export function PostCard({ post, liked, likeCount, onToggleLike, onDelete }: Pos
         {typeLabel && <Badge label={typeLabel} tone="primary" size="sm" />}
       </View>
 
-      <AppText variant="body" style={styles.body}>
-        {post.body}
-      </AppText>
+      {onOpen ? (
+        <Pressable onPress={onOpen} accessibilityRole="button" accessibilityLabel="글 자세히 보기">
+          <AppText variant="body" style={styles.body} numberOfLines={6}>
+            {post.body}
+          </AppText>
+        </Pressable>
+      ) : (
+        <AppText variant="body" style={styles.body}>
+          {post.body}
+        </AppText>
+      )}
 
       {post.hasPhoto && (
         <View style={[styles.photo, { backgroundColor: visual.accent }]}>
@@ -74,17 +84,32 @@ export function PostCard({ post, liked, likeCount, onToggleLike, onDelete }: Pos
           style={styles.footerBtn}
         >
           <AppText style={styles.footerIcon}>{liked ? '❤️' : '🤍'}</AppText>
-          <AppText variant="body" color={liked ? colors.danger : colors.textSecondary} weight="semibold">
+          <AppText variant="body" color={liked ? colors.coralInk : colors.textSecondary} weight="semibold">
             {likeCount}
           </AppText>
         </Pressable>
 
-        <View style={styles.footerBtn}>
-          <AppText style={styles.footerIcon}>💬</AppText>
-          <AppText variant="body" muted weight="semibold">
-            {post.commentCount}
-          </AppText>
-        </View>
+        {onOpen ? (
+          <Pressable
+            onPress={onOpen}
+            accessibilityRole="button"
+            accessibilityLabel={`댓글 ${post.commentCount}개 보기`}
+            hitSlop={8}
+            style={styles.footerBtn}
+          >
+            <AppText style={styles.footerIcon}>💬</AppText>
+            <AppText variant="body" muted weight="semibold">
+              {post.commentCount}
+            </AppText>
+          </Pressable>
+        ) : (
+          <View style={styles.footerBtn}>
+            <AppText style={styles.footerIcon}>💬</AppText>
+            <AppText variant="body" muted weight="semibold">
+              {post.commentCount}
+            </AppText>
+          </View>
+        )}
 
         {onDelete && (
           <Pressable

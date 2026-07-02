@@ -61,6 +61,7 @@ export type AnalyticsEvent =
   | 'booking_click'
   | 'map_open'
   | 'post_create'
+  | 'comment_create'
   | 'result_share';
 
 async function capture(

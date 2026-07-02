@@ -16,12 +16,13 @@ interface ToneStyle {
   fg: string;
 }
 
+// 틴트 배경 + 잉크 텍스트(원색 텍스트는 AA 미달 — 디자인 리서치)
 const TONES: Record<BadgeTone, ToneStyle> = {
-  primary: { bg: colors.primaryTint, fg: colors.primaryPressed },
-  mint: { bg: palette.mint, fg: palette.mintDeep },
-  coral: { bg: palette.coralTint, fg: palette.coralDeep },
+  primary: { bg: colors.primaryTint, fg: colors.primaryInk },
+  mint: { bg: palette.mint, fg: colors.mintInk },
+  coral: { bg: palette.coralTint, fg: colors.coralInk },
   neutral: { bg: colors.surfaceInset, fg: colors.textSecondary },
-  success: { bg: palette.mint, fg: palette.mintDeep },
+  success: { bg: palette.mint, fg: colors.mintInk },
 };
 
 export interface BadgeProps {

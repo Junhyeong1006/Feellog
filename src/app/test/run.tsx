@@ -3,10 +3,11 @@
  * '비슷해요'는 중립(0). 뒤로가기로 이전 문항 수정 가능. 마지막에 진단→결과로 이동.
  * 로그인 상태면 결과를 저장(taste_profiles/test_responses/onboarded).
  * 데스크탑: 두 장면을 좌우 나란히 비교(기획 의도 그대로).
+ * 중도 이탈 대비: 응답을 로컬에 저장하고, 재진입 시 이어서 진행(S2 DoD).
  */
 import { router } from 'expo-router';
-import { useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { saveDiagnosis } from '@/api/diagnosis';
 import type { TasteSnapshot } from '@/api/tasteProfiles';
@@ -14,6 +15,7 @@ import { diagnose, QUESTIONS, type Answer, type AnswerValue } from '@/core';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
 import { track } from '@/lib/analytics';
 import { useAuth } from '@/providers/AuthProvider';
+import { clearTestProgress, getTestProgress, setTestProgress } from '@/state/testProgress';
 import { setLocalTaste } from '@/state/tasteCache';
 import { colors, CONTENT_WIDTH, palette, radius, shadows, spacing } from '@/tokens';
 import { AppText, ProgressBar, Screen, ScreenHeader } from '@/ui';
@@ -25,7 +27,25 @@ export default function TestRunScreen() {
   const { isDesktop } = useBreakpoint();
   const [idx, setIdx] = useState(0);
   const [values, setValues] = useState<(AnswerValue | null)[]>(() => Array(TOTAL).fill(null));
+  /** 저장된 진행분 복원 중(첫 문항 깜빡임 방지) */
+  const [restoring, setRestoring] = useState(true);
   const submitting = useRef(false);
+
+  // 이어하기: 저장된 진행분이 있으면 복원(48시간 내, 문항 세트 동일할 때만)
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      const saved = await getTestProgress();
+      if (alive && saved) {
+        setValues(saved.values);
+        setIdx(saved.idx);
+      }
+      if (alive) setRestoring(false);
+    })();
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   const question = QUESTIONS[idx];
   const selected = values[idx];
@@ -52,6 +72,8 @@ export default function TestRunScreen() {
     };
     await setLocalTaste(snapshot);
 
+    await clearTestProgress(); // 완료 — 이어하기 진행분 제거
+
     try {
       if (session) {
         await saveDiagnosis(answers, result);
@@ -64,18 +86,36 @@ export default function TestRunScreen() {
   };
 
   const select = (val: AnswerValue) => {
+    if (submitting.current) return; // 제출 중 중복 입력 방지
     const next = [...values];
     next[idx] = val;
     setValues(next);
-    if (idx < TOTAL - 1) setIdx(idx + 1);
-    else void finish(next);
+    if (idx < TOTAL - 1) {
+      setIdx(idx + 1);
+      void setTestProgress(next, idx + 1); // 이탈 대비 저장
+    } else {
+      void finish(next);
+    }
   };
 
   const goBack = () => {
-    if (idx > 0) setIdx(idx - 1);
-    else if (router.canGoBack()) router.back();
+    if (submitting.current) return; // 제출 중 뒤로가기가 clear된 진행분을 재저장하는 것 방지
+    if (idx > 0) {
+      setIdx(idx - 1);
+      void setTestProgress(values, idx - 1);
+    } else if (router.canGoBack()) router.back();
     else router.replace('/test');
   };
+
+  if (restoring) {
+    return (
+      <Screen edges={['top', 'bottom']} maxWidth={isDesktop ? CONTENT_WIDTH.wide : undefined}>
+        <View style={styles.restoring}>
+          <ActivityIndicator color={colors.primary} />
+        </View>
+      </Screen>
+    );
+  }
 
   return (
     <Screen edges={['top', 'bottom']} noPadding maxWidth={isDesktop ? CONTENT_WIDTH.wide : undefined}>
@@ -106,7 +146,7 @@ export default function TestRunScreen() {
             title={question.left.title}
             desc={question.left.desc}
             accent={colors.primaryTint}
-            poleColor={colors.primaryPressed}
+            poleColor={colors.primaryInk}
             selected={selected === -2}
             wide={isDesktop}
             onPress={() => select(-2)}
@@ -179,6 +219,11 @@ function OptionCard({ poleLabel, title, desc, accent, poleColor, selected, wide,
 }
 
 const styles = StyleSheet.create({
+  restoring: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   counter: {
     paddingHorizontal: spacing.md,
   },

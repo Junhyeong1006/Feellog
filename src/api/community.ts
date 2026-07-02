@@ -128,15 +128,22 @@ export async function setPostLike(postId: string, liked: boolean): Promise<void>
 }
 
 /** 글 작성(작성자 정보는 트리거가 스냅샷). */
-export async function createPost(input: { body: string; category?: string | null }): Promise<void> {
+export async function createPost(input: {
+  body: string;
+  category?: string | null;
+  imageUrl?: string | null;
+}): Promise<void> {
   const sb = getSupabase();
   const uid = await currentUserId();
   if (!sb || !uid) throw new Error('로그인이 필요해요.');
   const body = input.body.trim();
   if (!body) throw new Error('내용을 입력해주세요.');
-  const { error } = await sb
-    .from('community_posts')
-    .insert({ user_id: uid, body, category: input.category ?? null });
+  const { error } = await sb.from('community_posts').insert({
+    user_id: uid,
+    body,
+    category: input.category ?? null,
+    image_url: input.imageUrl ?? null,
+  });
   if (error) throw error;
 }
 
@@ -149,5 +156,92 @@ export async function deletePost(postId: string): Promise<void> {
     .from('community_posts')
     .update({ deleted_at: new Date().toISOString() })
     .eq('id', postId);
+  if (error) throw error;
+}
+
+/** 글 1건 조회(상세 화면). 샘플 id면 샘플에서, 아니면 서버에서. 없으면 null. */
+export async function fetchPost(postId: string): Promise<Post | null> {
+  const sample = sampleAsPosts().find((p) => p.id === postId);
+  if (sample) return sample;
+  const sb = getSupabase();
+  if (!sb) return null;
+  const { data, error } = await sb
+    .from('community_posts')
+    .select('*')
+    .eq('id', postId)
+    .is('deleted_at', null)
+    .maybeSingle();
+  if (error) throw error;
+  return data ? mapRow(data as PostRow) : null;
+}
+
+// ─────────────────────────── 댓글(post_comments) ───────────────────────────
+
+/** 화면 공용 댓글 모델 */
+export interface Comment {
+  id: string;
+  userId: string;
+  authorName: string;
+  authorAvatarUrl: string | null;
+  body: string;
+  createdAtLabel: string;
+}
+
+interface CommentRow {
+  id: string;
+  user_id: string;
+  body: string;
+  author_name: string | null;
+  author_avatar_url: string | null;
+  created_at: string;
+}
+
+function mapCommentRow(r: CommentRow): Comment {
+  return {
+    id: r.id,
+    userId: r.user_id,
+    authorName: r.author_name?.trim() || '회원님',
+    authorAvatarUrl: r.author_avatar_url,
+    body: r.body,
+    createdAtLabel: formatTimeAgo(r.created_at),
+  };
+}
+
+/** 글의 댓글 목록(오래된 순 — 대화 흐름대로). */
+export async function fetchComments(postId: string): Promise<Comment[]> {
+  const sb = getSupabase();
+  if (!sb) return [];
+  const { data, error } = await sb
+    .from('post_comments')
+    .select('*')
+    .eq('post_id', postId)
+    .order('created_at', { ascending: true })
+    .limit(200);
+  if (error) throw error;
+  return ((data as CommentRow[] | null) ?? []).map(mapCommentRow);
+}
+
+/** 댓글 작성(작성자 정보는 트리거가 스냅샷). 등록된 댓글을 반환. */
+export async function createComment(postId: string, body: string): Promise<Comment> {
+  const sb = getSupabase();
+  const uid = await currentUserId();
+  if (!sb || !uid) throw new Error('로그인이 필요해요.');
+  const trimmed = body.trim();
+  if (!trimmed) throw new Error('내용을 입력해주세요.');
+  const { data, error } = await sb
+    .from('post_comments')
+    .insert({ post_id: postId, user_id: uid, body: trimmed })
+    .select('*')
+    .single();
+  if (error) throw error;
+  return mapCommentRow(data as CommentRow);
+}
+
+/** 내 댓글 삭제(하드 삭제 — 카운터는 트리거가 감소). */
+export async function deleteComment(commentId: string): Promise<void> {
+  const sb = getSupabase();
+  const uid = await currentUserId();
+  if (!sb || !uid) return;
+  const { error } = await sb.from('post_comments').delete().eq('id', commentId);
   if (error) throw error;
 }

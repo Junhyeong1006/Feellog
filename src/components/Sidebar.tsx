@@ -4,8 +4,11 @@
  * (tabs)/_layout.tsx에서 isDesktop일 때만 렌더된다.
  */
 import { usePathname, useRouter, type Href } from 'expo-router';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View, type PressableStateCallbackType } from 'react-native';
 import { Image } from 'expo-image';
+
+/** react-native-web hovered 상태(RN 타입에 없어 확장) */
+type WebPressableState = PressableStateCallbackType & { hovered?: boolean };
 
 import { displayNameOf } from '@/api/profiles';
 import { TYPE_META } from '@/core';
@@ -36,16 +39,25 @@ function NavItem({ item, active, onPress }: { item: NavDef; active: boolean; onP
       accessibilityRole="tab"
       accessibilityState={{ selected: active }}
       accessibilityLabel={item.label}
-      style={({ pressed }) => [styles.navItem, active && styles.navItemActive, pressed && styles.navItemPressed]}
+      style={(state) => {
+        const { pressed, hovered } = state as WebPressableState;
+        return [
+          styles.navItem,
+          hovered && !active && styles.navItemHovered,
+          active && styles.navItemActive,
+          pressed && styles.navItemPressed,
+        ];
+      }}
     >
+      {/* 활성 표시는 색+굵기+좌측 바 삼중 신호(색맹/저시력 대응) */}
+      {active && <View style={styles.activeBar} />}
       <AppText style={styles.navEmoji} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
         {item.emoji}
       </AppText>
-      {/* primaryPressed: 틴트 배경 위에서도 WCAG AA 대비 확보(primary는 2.9:1로 미달) */}
       <AppText
         variant="body"
-        weight={active ? 'bold' : 'medium'}
-        color={active ? colors.primaryPressed : colors.textSecondary}
+        weight={active ? 'bold' : 'semibold'}
+        color={active ? colors.primaryInk : colors.textSecondary}
       >
         {item.label}
       </AppText>
@@ -101,7 +113,7 @@ export function Sidebar() {
                 {displayNameOf(profile)}
               </AppText>
               {typeLabel && (
-                <AppText variant="caption" color={colors.primaryPressed} numberOfLines={1}>
+                <AppText variant="caption" color={colors.primaryInk} numberOfLines={1}>
                   {typeLabel}
                 </AppText>
               )}
@@ -118,9 +130,10 @@ export function Sidebar() {
 const styles = StyleSheet.create({
   root: {
     width: SIDEBAR_WIDTH,
-    backgroundColor: colors.surface,
+    // 캔버스와 같은 크림 — 색면 사이드바는 B2B 대시보드처럼 보인다(디자인 리서치)
+    backgroundColor: colors.background,
     borderRightColor: colors.border,
-    borderRightWidth: StyleSheet.hairlineWidth,
+    borderRightWidth: 1,
     paddingVertical: spacing.xxl,
     paddingHorizontal: spacing.lg,
   },
@@ -140,13 +153,26 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     minHeight: 52,
     paddingHorizontal: spacing.base,
-    borderRadius: radius.lg,
+    borderRadius: radius.md,
+    overflow: 'hidden',
+  },
+  navItemHovered: {
+    backgroundColor: colors.surfaceAlt,
   },
   navItemActive: {
     backgroundColor: colors.primaryTint,
   },
   navItemPressed: {
     opacity: 0.7,
+  },
+  activeBar: {
+    position: 'absolute',
+    left: 0,
+    top: 10,
+    bottom: 10,
+    width: 4,
+    borderRadius: 2,
+    backgroundColor: colors.primary,
   },
   navEmoji: {
     fontSize: 22,
@@ -161,7 +187,10 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     padding: spacing.md,
     borderRadius: radius.lg,
-    backgroundColor: colors.surfaceInset,
+    // 크림 캔버스 위 흰 카드(크림-온-크림 중첩 금지 규칙)
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.borderOnWhite,
   },
   avatar: {
     width: 44,

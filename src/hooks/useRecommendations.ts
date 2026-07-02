@@ -6,6 +6,7 @@ import { useFocusEffect } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
 
 import { useAuth } from '@/providers/AuthProvider';
+import { getRecoFilter, toCoreFilter } from '@/state/recoFilter';
 
 import { loadRankedItems, type RecoItem } from './loadReco';
 
@@ -19,7 +20,9 @@ export function useRecommendations(limit: number) {
   const load = useCallback(async () => {
     const g = ++gen.current;
     try {
-      const { items: next } = await loadRankedItems(hasSession, limit);
+      // 추천 탭에서 고른 필터를 미리보기에도 동일 적용(일관성)
+      const filter = toCoreFilter(await getRecoFilter());
+      const { items: next } = await loadRankedItems(hasSession, limit, filter);
       if (g !== gen.current) return;
       setItems(next);
     } catch {

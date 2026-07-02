@@ -103,7 +103,7 @@ export default function ConsentScreen() {
                 style={styles.itemCheckbox}
                 label={
                   <AppText variant="body">
-                    <AppText variant="body" color={item.required ? colors.primary : colors.textMuted} weight="semibold">
+                    <AppText variant="body" color={item.required ? colors.primaryInk : colors.textSecondary} weight="semibold">
                       {item.required ? '[필수] ' : '[선택] '}
                     </AppText>
                     {item.title}

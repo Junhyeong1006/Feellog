@@ -113,6 +113,7 @@ export default function CommunityScreen() {
               likeCount={likeCountOf(post)}
               onToggleLike={() => toggleLike(post)}
               onDelete={canDelete(post) ? () => removePost(post.id) : undefined}
+              onOpen={() => router.push(`/community/${post.id}`)}
             />
           ))}
         </View>

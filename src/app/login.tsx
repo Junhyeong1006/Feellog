@@ -202,8 +202,9 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   link: {
-    color: colors.primary,
+    color: colors.primaryInk,
     fontWeight: '600',
+    textDecorationLine: 'underline',
   },
   // ── 데스크탑 스플릿 ──
   deskRoot: {
@@ -213,7 +214,8 @@ const styles = StyleSheet.create({
   },
   brandPane: {
     flex: 1,
-    backgroundColor: colors.primaryTint,
+    // "파란 배경 = 장식" 안티패턴 회피: 브랜드 블루는 인터랙션 전용(디자인 리서치)
+    backgroundColor: colors.surfaceAlt,
     alignItems: 'center',
     justifyContent: 'center',
     padding: spacing.huge,

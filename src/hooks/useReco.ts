@@ -11,6 +11,13 @@ import { persistTaste, type TasteSnapshot } from '@/api/tasteProfiles';
 import { applyFeedback, matchScore } from '@/core';
 import { track } from '@/lib/analytics';
 import { useAuth } from '@/providers/AuthProvider';
+import {
+  EMPTY_FILTER,
+  getRecoFilter,
+  setRecoFilter,
+  toCoreFilter,
+  type StoredRecoFilter,
+} from '@/state/recoFilter';
 import { setLocalTaste } from '@/state/tasteCache';
 
 import { emptyTasteSnapshot, loadRankedItems, type RecoItem } from './loadReco';
@@ -24,6 +31,13 @@ export function useReco() {
   const [loading, setLoading] = useState(true);
   const [deck, setDeck] = useState<RecoItem[]>([]);
   const [index, setIndex] = useState(0);
+  /** 하드필터(지역/가격). 로드 시 저장분 복원, 변경 시 저장+재로드 */
+  const [filter, setFilterState] = useState<StoredRecoFilter>(EMPTY_FILTER);
+  /** load()가 항상 최신 필터를 읽도록 ref로도 유지(스테일 클로저 방지 — '다시 보기' 등 무인자 호출) */
+  const filterRef = useRef<StoredRecoFilter>(EMPTY_FILTER);
+  const filterLoaded = useRef(false);
+  /** 지역 필터 옵션(카탈로그에 존재하는 시/도) */
+  const [regions, setRegions] = useState<string[]>([]);
   const tasteRef = useRef<TasteSnapshot>(emptyTasteSnapshot());
   /** 로드 세대 토큰 — 늦게 도착한 이전 로드가 최신 결과를 덮어쓰지 않게(스테일 방지). */
   const loadGen = useRef(0);
@@ -32,21 +46,38 @@ export function useReco() {
   /** 서버 저장 직렬화 큐 — 연속 반응 시 늦게 끝난 이전 스냅샷이 최신을 덮어쓰지 않게. */
   const persistQueue = useRef<Promise<void>>(Promise.resolve());
 
-  const load = useCallback(async () => {
-    const gen = ++loadGen.current;
-    setLoading(true);
-    try {
-      const { items, taste } = await loadRankedItems(hasSession, 40);
-      if (gen !== loadGen.current) return; // 더 새로운 로드가 시작됨 → 이 결과 폐기
-      tasteRef.current = taste;
-      setDeck(items);
-      setIndex(0);
-    } catch {
-      if (gen === loadGen.current) setDeck([]);
-    } finally {
-      if (gen === loadGen.current) setLoading(false); // 실패해도 스피너에서 벗어남
-    }
-  }, [hasSession]);
+  const load = useCallback(
+    async (overrideFilter?: StoredRecoFilter) => {
+      const gen = ++loadGen.current;
+      setLoading(true);
+      try {
+        // 첫 로드에서는 저장된 필터 복원
+        let f = overrideFilter;
+        if (!f) {
+          if (!filterLoaded.current) {
+            f = await getRecoFilter();
+            filterLoaded.current = true;
+            filterRef.current = f;
+            setFilterState(f);
+          } else {
+            f = filterRef.current;
+          }
+        }
+        const { items, taste, regions: regs } = await loadRankedItems(hasSession, 40, toCoreFilter(f));
+        if (gen !== loadGen.current) return; // 더 새로운 로드가 시작됨 → 이 결과 폐기
+        tasteRef.current = taste;
+        setDeck(items);
+        setRegions(regs);
+        setIndex(0);
+      } catch {
+        if (gen === loadGen.current) setDeck([]);
+      } finally {
+        if (gen === loadGen.current) setLoading(false); // 실패해도 스피너에서 벗어남
+      }
+    },
+    // 필터는 filterRef로 읽어 항상 최신(클로저 고착 방지) — deps는 세션만
+    [hasSession],
+  );
 
   useEffect(() => {
     void load();
@@ -55,6 +86,17 @@ export function useReco() {
       loadGen.current++;
     };
   }, [load]);
+
+  /** 필터 변경: 저장 + 즉시 재로드 */
+  const setFilter = useCallback(
+    (next: StoredRecoFilter) => {
+      filterRef.current = next;
+      setFilterState(next);
+      void setRecoFilter(next);
+      void load(next);
+    },
+    [load],
+  );
 
   const react = useCallback(
     async (item: RecoItem, liked: boolean) => {
@@ -117,7 +159,10 @@ export function useReco() {
     current: deck[index] ?? null,
     total: deck.length,
     remaining: Math.max(0, deck.length - index),
+    filter,
+    setFilter,
+    regions,
     react,
-    reset: load,
+    reset: () => load(),
   };
 }

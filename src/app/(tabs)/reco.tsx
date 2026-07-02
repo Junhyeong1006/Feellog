@@ -9,9 +9,11 @@ import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
 import { displayNameOf } from '@/api/profiles';
 import { ActivityCard } from '@/components/ActivityCard';
+import { RecoFilterBar } from '@/components/RecoFilterBar';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
 import { useReco } from '@/hooks/useReco';
 import { useAuth } from '@/providers/AuthProvider';
+import { EMPTY_FILTER, hasActiveFilter } from '@/state/recoFilter';
 import { colors, radius, spacing } from '@/tokens';
 import { AppText, Button, Screen } from '@/ui';
 
@@ -19,8 +21,9 @@ const DESKTOP_MAX_WIDTH = 620;
 
 export default function RecoScreen() {
   const { profile, session, guest } = useAuth();
-  const { loading, current, total, index, react, reset } = useReco();
+  const { loading, current, total, index, filter, setFilter, regions, react, reset } = useReco();
   const { isDesktop } = useBreakpoint();
+  const filtered = hasActiveFilter(filter);
   const name = session ? displayNameOf(profile) : '회원님';
   // displayNameOf 폴백('회원님')에 호칭이 이미 붙어 있어 "회원님님"이 되지 않게 처리
   const greetName = name.endsWith('님') ? name : `${name}님`;
@@ -76,6 +79,8 @@ export default function RecoScreen() {
         </AppText>
       </View>
 
+      <RecoFilterBar filter={filter} regions={regions} onChange={setFilter} />
+
       {current ? (
         <View style={styles.cardWrap}>
           <ActivityCard
@@ -88,6 +93,24 @@ export default function RecoScreen() {
           <AppText variant="caption" muted center style={styles.progress}>
             {Math.min(index + 1, total)} / {total}
           </AppText>
+        </View>
+      ) : filtered && total === 0 ? (
+        <View style={styles.empty}>
+          <View style={styles.emptyIcon}>
+            <AppText style={styles.emptyEmoji}>🔍</AppText>
+          </View>
+          <AppText variant="h2" center>
+            조건에 맞는 활동이 없어요
+          </AppText>
+          <AppText variant="bodyLg" muted center style={styles.emptyBody}>
+            지역이나 참가비 조건을{'\n'}조금 넓혀보시겠어요?
+          </AppText>
+          <Button
+            label="필터 초기화"
+            variant="secondary"
+            onPress={() => setFilter(EMPTY_FILTER)}
+            style={styles.resetBtn}
+          />
         </View>
       ) : (
         <View style={styles.empty}>

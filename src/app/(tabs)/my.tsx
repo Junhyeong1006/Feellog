@@ -60,7 +60,7 @@ export default function MyScreen() {
         {profile?.avatar_url ? (
           <Image source={{ uri: profile.avatar_url }} style={styles.avatarImg} contentFit="cover" />
         ) : (
-          <AppText variant="h1" color={colors.primary}>
+          <AppText variant="h1" color={colors.primaryInk}>
             {initial}
           </AppText>
         )}

@@ -27,8 +27,9 @@ export default function TabsLayout() {
           tabBar={isDesktop ? () => null : undefined}
           screenOptions={{
             headerShown: false,
-            tabBarActiveTintColor: colors.primary,
-            tabBarInactiveTintColor: colors.textMuted,
+            // 활성 라벨은 잉크 블루(작은 글자에서 원색 blue500은 AA 미달)
+            tabBarActiveTintColor: colors.primaryInk,
+            tabBarInactiveTintColor: colors.textSecondary,
             tabBarStyle: styles.bar,
             tabBarLabelStyle: styles.label,
             tabBarItemStyle: styles.item,
@@ -71,8 +72,8 @@ const styles = StyleSheet.create({
   bar: {
     backgroundColor: colors.surface,
     borderTopColor: colors.border,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    height: Platform.OS === 'web' ? 68 : undefined,
+    borderTopWidth: 1,
+    height: Platform.OS === 'web' ? 74 : undefined,
     paddingTop: 6,
   },
   item: {
@@ -80,7 +81,7 @@ const styles = StyleSheet.create({
   },
   label: {
     fontFamily: fontFamily.base,
-    fontSize: 12,
+    fontSize: 15, // 캡션 하한(15px) 준수 — 시니어 가독성 플로어
     fontWeight: '600',
     marginBottom: Platform.OS === 'web' ? 6 : 2,
   },

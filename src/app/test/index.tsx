@@ -3,13 +3,15 @@
  * 게스트도 체험 가능(결과 저장은 로그인 후).
  * 데스크탑: 안내 카드 3장을 한 줄로, 시작 버튼은 중앙 인라인.
  */
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { QUESTIONS } from '@/core';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
 import { track } from '@/lib/analytics';
 import { useAuth } from '@/providers/AuthProvider';
+import { answeredCount, clearTestProgress, getTestProgress } from '@/state/testProgress';
 import { colors, CONTENT_WIDTH, radius, spacing } from '@/tokens';
 import { AppText, Button, Card, Screen } from '@/ui';
 
@@ -22,18 +24,49 @@ const POINTS = [
 export default function TestIntroScreen() {
   const { session, guest } = useAuth();
   const { isDesktop } = useBreakpoint();
+  /** 저장된 진행분(있으면 "이어서 하기" 노출). null=없음 */
+  const [resumeCount, setResumeCount] = useState<number | null>(null);
+
+  useFocusEffect(
+    useCallback(() => {
+      let alive = true;
+      getTestProgress().then((p) => {
+        if (alive) setResumeCount(p ? answeredCount(p) : null);
+      });
+      return () => {
+        alive = false;
+      };
+    }, []),
+  );
 
   const onStart = () => {
-    track('test_start');
+    // 재개/신규를 구분해 시작 수 중복 집계 방지
+    track('test_start', { resumed: resumeCount != null });
     router.push('/test/run');
   };
+
+  const onRestart = async () => {
+    await clearTestProgress();
+    setResumeCount(null);
+    onStart();
+  };
+
+  const startButtons =
+    resumeCount != null ? (
+      <>
+        <Button label={`이어서 하기 (${resumeCount}/${QUESTIONS.length} 완료)`} onPress={onStart} />
+        <Button label="처음부터 다시 시작" variant="ghost" onPress={onRestart} />
+      </>
+    ) : (
+      <Button label="시작하기" onPress={onStart} />
+    );
 
   return (
     <Screen
       scroll
       maxWidth={isDesktop ? CONTENT_WIDTH.wide : undefined}
       contentStyle={styles.content}
-      footer={isDesktop ? undefined : <Button label="시작하기" onPress={onStart} />}
+      footer={isDesktop ? undefined : <View style={styles.footerCol}>{startButtons}</View>}
     >
       <View style={styles.hero}>
         <View style={styles.badge}>
@@ -68,9 +101,7 @@ export default function TestIntroScreen() {
         ))}
       </View>
 
-      {isDesktop && (
-        <Button label="시작하기" fullWidth={false} style={styles.deskStart} onPress={onStart} />
-      )}
+      {isDesktop && <View style={styles.deskStartCol}>{startButtons}</View>}
 
       {!session && guest && (
         <AppText variant="caption" muted center style={styles.guestNote}>
@@ -132,9 +163,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.xs,
   },
-  deskStart: {
+  deskStartCol: {
     alignSelf: 'center',
-    minWidth: 280,
+    minWidth: 320,
+    gap: spacing.xs,
+  },
+  footerCol: {
+    gap: spacing.xs,
   },
   pointEmoji: {
     fontSize: 34,

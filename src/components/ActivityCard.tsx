@@ -72,7 +72,7 @@ export function ActivityCard({ activity, score, onPressDetail, bandHeight = 150 
         </View>
 
         {onPressDetail != null && (
-          <AppText variant="body" weight="semibold" color={colors.primary} style={styles.detailLink}>
+          <AppText variant="body" weight="semibold" color={colors.primaryInk} style={styles.detailLink}>
             상세보기 ›
           </AppText>
         )}
