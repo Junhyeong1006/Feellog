@@ -5,7 +5,7 @@
  */
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
 import type { Post } from '@/api/community';
 import { PostCard } from '@/components/PostCard';
@@ -13,8 +13,8 @@ import { useBreakpoint } from '@/hooks/useBreakpoint';
 import { useCommunity } from '@/hooks/useCommunity';
 import { useTaste } from '@/hooks/useTaste';
 import { useAuth } from '@/providers/AuthProvider';
-import { colors, CONTENT_WIDTH, MIN_TOUCH_SIZE, radius, spacing } from '@/tokens';
-import { AppText, Button, Screen } from '@/ui';
+import { colors, CONTENT_WIDTH, spacing } from '@/tokens';
+import { AppText, Button, Chip, Screen } from '@/ui';
 
 type FilterKey = 'all' | 'mine' | 'popular' | 'photo';
 
@@ -30,7 +30,7 @@ export default function CommunityScreen() {
   const { taste } = useTaste();
   const myType = taste?.mainType ?? null;
   const myId = session?.user.id ?? null;
-  const { posts, loading, isLiked, likeCountOf, toggleLike, removePost } = useCommunity();
+  const { posts, loading, error, isLiked, likeCountOf, toggleLike, removePost, reload } = useCommunity();
   const { isDesktop } = useBreakpoint();
   const [filter, setFilter] = useState<FilterKey>('all');
 
@@ -64,31 +64,21 @@ export default function CommunityScreen() {
       </View>
 
       <View style={styles.filters}>
-        {FILTERS.map((f) => {
-          const active = f.key === filter;
-          return (
-            <Pressable
-              key={f.key}
-              onPress={() => setFilter(f.key)}
-              accessibilityRole="button"
-              accessibilityState={{ selected: active }}
-              style={[styles.chip, active ? styles.chipActive : styles.chipInactive]}
-            >
-              <AppText
-                variant="body"
-                weight="semibold"
-                color={active ? colors.onPrimary : colors.textSecondary}
-              >
-                {f.label}
-              </AppText>
-            </Pressable>
-          );
-        })}
+        {FILTERS.map((f) => (
+          <Chip key={f.key} label={f.label} selected={f.key === filter} onPress={() => setFilter(f.key)} />
+        ))}
       </View>
 
       {loading && posts.length === 0 ? (
         <View style={styles.loading}>
           <ActivityIndicator color={colors.primary} />
+        </View>
+      ) : error && posts.length === 0 ? (
+        <View style={styles.empty}>
+          <AppText variant="body" muted center style={styles.emptyText}>
+            일시적인 문제로 글을 불러오지 못했어요.{'\n'}잠시 후 다시 시도해 주세요.
+          </AppText>
+          <Button label="다시 시도" variant="secondary" onPress={() => void reload()} />
         </View>
       ) : showMineEmpty ? (
         <View style={styles.empty}>
@@ -137,20 +127,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: spacing.sm,
-  },
-  chip: {
-    minHeight: MIN_TOUCH_SIZE,
-    paddingHorizontal: spacing.lg,
-    borderRadius: radius.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  chipActive: {
-    // primaryPressed: 흰 라벨과 WCAG AA(4.7:1) — primary는 3.2:1로 미달
-    backgroundColor: colors.primaryPressed,
-  },
-  chipInactive: {
-    backgroundColor: colors.surfaceInset,
   },
   list: {
     gap: spacing.base,

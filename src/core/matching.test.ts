@@ -33,6 +33,20 @@ describe('passesFilter', () => {
   });
 });
 
+describe('passesFilter — null 엄격성', () => {
+  const base = { id: 'a', title: '테스트 활동', vector: { rhythm: 0, relation: 0, experience: 0, participation: 0, reward: 0 } };
+  it("[회귀] 가격 미입력 활동은 '무료만'(maxPrice 0) 필터에서 제외", () => {
+    expect(passesFilter({ ...base, price: null }, { maxPrice: 0 })).toBe(false);
+    expect(passesFilter({ ...base, price: 0 }, { maxPrice: 0 })).toBe(true);
+  });
+  it('[회귀] 지역 미입력 활동은 지역 필터에서 제외', () => {
+    expect(passesFilter({ ...base, regionSido: null }, { regionSido: '서울' })).toBe(false);
+  });
+  it('필터가 없으면 null 값도 통과', () => {
+    expect(passesFilter({ ...base, price: null })).toBe(true);
+  });
+});
+
 describe('recommend', () => {
   it('점수 내림차순 정렬 + limit', () => {
     const user = vec(80, 20, 70, 20, 10);

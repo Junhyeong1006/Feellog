@@ -79,5 +79,11 @@ export async function signInWithProvider(provider: OAuthProvider): Promise<void>
 
 export async function signOut(): Promise<void> {
   const sb = getSupabase();
-  await sb?.auth.signOut();
+  if (!sb) return;
+  // 서버 로그아웃이 실패해도(오프라인 등) 로컬 세션은 반드시 제거한다 —
+  // 그렇지 않으면 다음 부팅에서 조용히 다시 로그인돼 공용 기기에서 위험.
+  const { error } = await sb.auth.signOut();
+  if (error) {
+    await sb.auth.signOut({ scope: 'local' }).catch(() => {});
+  }
 }

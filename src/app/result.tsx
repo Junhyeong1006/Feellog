@@ -20,7 +20,7 @@ import {
 import { useBreakpoint } from '@/hooks/useBreakpoint';
 import { track } from '@/lib/analytics';
 import { useAuth } from '@/providers/AuthProvider';
-import { colors, CONTENT_WIDTH, spacing } from '@/tokens';
+import { colors, CONTENT_WIDTH, MAX_CONTENT_WIDTH, spacing } from '@/tokens';
 import { absoluteUrl, shareContent } from '@/utils/share';
 import { AppText, Badge, Button, Card, Screen } from '@/ui';
 
@@ -50,10 +50,10 @@ export default function ResultScreen() {
   // 데스크탑 2컬럼: 컬럼 = (wide 920 - 화면패딩 48 - 컬럼갭 24)/2, 카드 패딩(lg) 40 제외 ≈ 384
   const radarMaxWidth = isDesktop
     ? (CONTENT_WIDTH.wide - spacing.xl * 2 - spacing.xl) / 2 - spacing.lg * 2
-    : width - spacing.xl * 2 - spacing.lg * 2;
+    : Math.min(width, MAX_CONTENT_WIDTH) - spacing.xl * 2 - spacing.lg * 2;
 
   const onShare = async () => {
-    track('result_share', { type: result.mainType });
+    track('result_share');
     const outcome = await shareContent({
       title: `나는 ${type.label}!`,
       message: `Feellog 성향 테스트 결과, 나는 "${type.label}"이에요. 당신의 여가 유형도 알아보세요!`,
@@ -138,7 +138,7 @@ export default function ResultScreen() {
       )}
 
       {shareNote && (
-        <AppText variant="caption" center color={colors.primary} style={styles.shareNote}>
+        <AppText variant="caption" center color={colors.primaryInk} style={styles.shareNote}>
           {shareNote}
         </AppText>
       )}

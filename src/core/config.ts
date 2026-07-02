@@ -20,7 +20,7 @@ export const AXIS_META: Record<Axis, { label: string; posLabel: string; negLabel
   reward: { label: '기대 보상', posLabel: '실용·성취', negLabel: '정서·회복' },
 };
 
-/** 축 가중치 (매칭·분류 거리 계산 시) — 개발계획서 2.3.3 */
+/** 축 가중치 (추천 "매칭" 거리 전용) — 개발계획서 2.3.3. 분류에는 쓰지 않는다(§2.2.2). */
 export const AXIS_WEIGHTS: AxisVector = {
   rhythm: 1.2,
   relation: 1.1,
@@ -28,6 +28,25 @@ export const AXIS_WEIGHTS: AxisVector = {
   participation: 0.9,
   reward: 0.8,
 };
+
+/** 분류(6유형 최근접 중심)용 균등 가중치 — 개발계획서 §2.2.2 "분류엔 w_a=1(균등)" */
+export const CLASSIFY_WEIGHTS: AxisVector = {
+  rhythm: 1,
+  relation: 1,
+  experience: 1,
+  participation: 1,
+  reward: 1,
+};
+
+/** 완전 동점 시 결정적 tie-break 순서 — 개발계획서 §2.2.2 (재현성 보장) */
+export const TYPE_TIE_ORDER: MainType[] = [
+  'active_explorer', // vitality
+  'warm_social', // warmth
+  'handcraft_achiever', // craft
+  'life_upgrade', // upgrade
+  'culture_enjoyer', // culture
+  'calm_immersion', // stillness
+];
 
 /**
  * 6 메인 유형 중심 벡터 (-100~100). 스크린샷 "활동 유형 6가지"(-25~25) ×4.
@@ -60,6 +79,9 @@ export const SUB_TRAIT_META: Record<SubTrait, { label: string; tagline: string }
 
 /** 보조 성향 표시 임계값 (0~100). 이 값 이상일 때만 배지로 노출(0~1개). */
 export const SUB_TRAIT_THRESHOLD = 60;
+
+/** 보조 성향 박빙 회피 간격 — 두 점수 차가 이보다 작으면 표시하지 않음(개발계획서 §2.1.3) */
+export const SUB_TRAIT_GAP = 8;
 
 /** 카드 피드백 온라인 보정 파라미터 — 개발계획서 2.4 */
 export const FEEDBACK = {

@@ -3,7 +3,7 @@
  * PostHog HTTP capture API로 직접 전송(별도 SDK 의존성 없음, 웹·네이티브 공용).
  * EXPO_PUBLIC_POSTHOG_KEY 미설정 시 no-op(개발 중엔 콘솔 디버그만) — 계정 없이도 앱은 그대로 동작.
  *
- * 개인정보: 이벤트에 이름/프로필 내용은 싣지 않는다. 식별자는 익명 UUID,
+ * 개인정보: 이벤트에 이름/프로필 내용·성향 유형 등 개인 특성을 싣지 않는다. 식별자는 익명 UUID,
  * 로그인 시 Supabase user id로 연결(identify). 마케팅 동의와 무관한 서비스 품질 측정 목적.
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';

@@ -30,7 +30,9 @@ export function applyFeedback(
     const delta = eta * dir * (activityVector[axis] - current[axis]);
     let v = current[axis] + delta;
     v = clamp(v, base[axis] - drift, base[axis] + drift); // base에서 과이탈 방지
-    next[axis] = clampAxis(Math.round(v));
+    // 0.1 단위 유지: 정수 반올림은 |delta|<0.5에서 EMA가 영구 정지하는 문제가 있어
+    // 소수 1자리로만 양자화(저장 시 DB smallint 변환은 persistTaste에서 반올림).
+    next[axis] = clampAxis(Math.round(v * 10) / 10);
   }
   return next;
 }

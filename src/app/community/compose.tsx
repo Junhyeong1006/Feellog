@@ -5,7 +5,7 @@
  */
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
-import { router } from 'expo-router';
+import { Redirect, router } from 'expo-router';
 import { useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
@@ -13,6 +13,7 @@ import { createPost } from '@/api/community';
 import { uploadPostImage } from '@/api/storage';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
 import { track } from '@/lib/analytics';
+import { useAuth } from '@/providers/AuthProvider';
 import { useFontScale } from '@/providers/FontScaleProvider';
 import {
   colors,
@@ -24,7 +25,7 @@ import {
   spacing,
   typography,
 } from '@/tokens';
-import { AppText, Button, Screen, ScreenHeader } from '@/ui';
+import { AppText, Button, Chip, Screen, ScreenHeader } from '@/ui';
 
 const MAX = 2000;
 const CATEGORY_OPTIONS = [
@@ -35,6 +36,7 @@ const CATEGORY_OPTIONS = [
 export default function ComposeScreen() {
   const { isDesktop } = useBreakpoint();
   const { scale } = useFontScale();
+  const { loading, session } = useAuth();
   const [body, setBody] = useState('');
   const [category, setCategory] = useState<string | null>(null);
   const [photo, setPhoto] = useState<{ uri: string; width: number | null; height: number | null } | null>(null);
@@ -45,6 +47,9 @@ export default function ComposeScreen() {
 
   const trimmed = body.trim();
   const canSubmit = trimmed.length > 0 && !submitting;
+
+  // 로그인 전용 화면 — 딥링크/새로고침 직접 진입 가드
+  if (!loading && !session) return <Redirect href="/login" />;
 
   const pickPhoto = async () => {
     setError(null);
@@ -132,26 +137,15 @@ export default function ComposeScreen() {
           카테고리 (선택)
         </AppText>
         <View style={styles.chips}>
-          {CATEGORY_OPTIONS.map((c) => {
-            const active = c === category;
-            return (
-              <Pressable
-                key={c}
-                onPress={() => setCategory(active ? null : c)}
-                accessibilityRole="button"
-                accessibilityState={{ selected: active }}
-                style={[styles.chip, active ? styles.chipActive : styles.chipInactive]}
-              >
-                <AppText
-                  variant="caption"
-                  weight="semibold"
-                  color={active ? colors.onPrimary : colors.textSecondary}
-                >
-                  {c}
-                </AppText>
-              </Pressable>
-            );
-          })}
+          {CATEGORY_OPTIONS.map((c) => (
+            <Chip
+              key={c}
+              label={c}
+              size="sm"
+              selected={c === category}
+              onPress={() => setCategory(c === category ? null : c)}
+            />
+          ))}
         </View>
 
         <AppText variant="body" weight="semibold" style={styles.catLabel}>
@@ -224,20 +218,6 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: spacing.sm,
   },
-  chip: {
-    minHeight: MIN_TOUCH_SIZE,
-    paddingHorizontal: spacing.base,
-    borderRadius: radius.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  chipActive: {
-    // primaryPressed: 흰 라벨과 WCAG AA(4.7:1) — primary는 3.2:1로 미달
-    backgroundColor: colors.primaryPressed,
-  },
-  chipInactive: {
-    backgroundColor: colors.surfaceInset,
-  },
   error: {
     marginTop: spacing.xs,
   },
@@ -272,8 +252,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: spacing.sm,
     right: spacing.sm,
-    // 진한 오버레이(밝은 사진 위에서도 라벨 대비 확보) + 48dp 터치 하한 준수
-    backgroundColor: 'rgba(35, 32, 26, 0.78)',
+    backgroundColor: colors.scrimStrong,
     borderRadius: radius.pill,
     paddingHorizontal: spacing.base,
     minHeight: MIN_TOUCH_SIZE,

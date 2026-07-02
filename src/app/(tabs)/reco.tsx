@@ -14,10 +14,8 @@ import { useBreakpoint } from '@/hooks/useBreakpoint';
 import { useReco } from '@/hooks/useReco';
 import { useAuth } from '@/providers/AuthProvider';
 import { EMPTY_FILTER, hasActiveFilter } from '@/state/recoFilter';
-import { colors, radius, spacing } from '@/tokens';
+import { colors, CONTENT_WIDTH, radius, spacing } from '@/tokens';
 import { AppText, Button, Screen } from '@/ui';
-
-const DESKTOP_MAX_WIDTH = 620;
 
 export default function RecoScreen() {
   const { profile, session, guest } = useAuth();
@@ -28,7 +26,7 @@ export default function RecoScreen() {
   // displayNameOf 폴백('회원님')에 호칭이 이미 붙어 있어 "회원님님"이 되지 않게 처리
   const greetName = name.endsWith('님') ? name : `${name}님`;
 
-  const maxWidth = isDesktop ? DESKTOP_MAX_WIDTH : undefined;
+  const maxWidth = isDesktop ? CONTENT_WIDTH.focus : undefined;
 
   if (loading) {
     return (
@@ -121,7 +119,7 @@ export default function RecoScreen() {
             오늘의 추천을 다 봤어요
           </AppText>
           <AppText variant="bodyLg" muted center style={styles.emptyBody}>
-            좋아요한 활동은 마이페이지에서{'\n'}다시 볼 수 있어요
+            좋아요로 남긴 취향은{'\n'}다음 추천에 바로 반영돼요
           </AppText>
           <Button label="다시 보기" variant="secondary" onPress={reset} style={styles.resetBtn} />
           {guest && !session && (

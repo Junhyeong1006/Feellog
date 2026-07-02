@@ -10,7 +10,7 @@ import { recordConsents } from '@/api/consents';
 import { markConsented } from '@/api/profiles';
 import { CONSENT_ITEMS, type ConsentKind } from '@/config/legal';
 import { useAuth } from '@/providers/AuthProvider';
-import { colors, spacing } from '@/tokens';
+import { colors, fontFamily, spacing } from '@/tokens';
 import { AppText, Button, Card, Checkbox, Divider, Screen } from '@/ui';
 
 type ConsentState = Record<ConsentKind, boolean>;
@@ -153,10 +153,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   viewLink: {
-    color: colors.textSecondary,
+    fontFamily: fontFamily.base,
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.primaryInk,
     textDecorationLine: 'underline',
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.xs,
+    lineHeight: 48, // 웹 hitSlop 미지원 — 줄 높이로 48dp 터치 확보
+    paddingHorizontal: spacing.md,
   },
   error: {
     paddingHorizontal: spacing.sm,

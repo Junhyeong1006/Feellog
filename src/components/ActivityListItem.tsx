@@ -2,7 +2,6 @@
  * ActivityListItem — 컴팩트 활동 행(홈 미리보기/마이 좋아요 목록).
  * 카테고리 이모지 썸네일 + 제목 + 지역·참가비(또는 매칭%). 탭하면 상세로.
  */
-import { Image } from 'expo-image';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import type { AppActivity } from '@/api/activities';
@@ -11,6 +10,7 @@ import { AppText, Badge } from '@/ui';
 import { formatPrice, formatRegion } from '@/utils/format';
 
 import { categoryVisual } from './categoryVisual';
+import { CategoryImage } from './CategoryImage';
 
 export interface ActivityListItemProps {
   activity: AppActivity;
@@ -30,11 +30,7 @@ export function ActivityListItem({ activity, score, onPress }: ActivityListItemP
       style={({ pressed }) => [styles.row, pressed && styles.pressed]}
     >
       <View style={[styles.thumb, { backgroundColor: visual.accent }]}>
-        {activity.imageUrl ? (
-          <Image source={{ uri: activity.imageUrl }} style={styles.image} contentFit="cover" />
-        ) : (
-          <AppText style={styles.emoji}>{visual.emoji}</AppText>
-        )}
+        <CategoryImage uri={activity.imageUrl} emoji={visual.emoji} emojiSize={30} />
       </View>
 
       <View style={styles.body}>

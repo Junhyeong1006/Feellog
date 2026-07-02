@@ -13,10 +13,10 @@ import { useAuth } from '@/providers/AuthProvider';
 import { getOnboardingSeen } from '@/state/appFlags';
 import { getLocalTaste } from '@/state/tasteCache';
 import { colors, spacing } from '@/tokens';
-import { AppText, Logo } from '@/ui';
+import { AppText, Button, Logo } from '@/ui';
 
 export default function BootDecider() {
-  const { loading, session, guest, profile, profileLoading } = useAuth();
+  const { loading, session, guest, profile, profileLoading, profileError, refreshProfile } = useAuth();
   const [onboardingSeen, setOnboardingSeen] = useState<boolean | null>(null);
   const [hasLocalTaste, setHasLocalTaste] = useState<boolean | null>(null);
 
@@ -47,8 +47,29 @@ export default function BootDecider() {
 
   // 로그인 사용자: 동의 게이트 → 성향테스트 → 홈
   if (session) {
+    // 프로필을 "못 불러온" 것(일시 장애)과 "없는" 것을 구분 —
+    // 장애를 미동의로 착각해 기존 사용자를 동의/테스트로 돌려보내지 않는다.
+    if (profileError) {
+      return (
+        <View style={styles.splash}>
+          <AppText variant="h2" center>
+            연결이 원활하지 않아요
+          </AppText>
+          <AppText variant="body" muted center>
+            일시적인 문제예요. 잠시 후 다시 시도해 주세요.
+          </AppText>
+          <Button
+            label="다시 시도"
+            fullWidth={false}
+            style={styles.retryBtn}
+            onPress={() => void refreshProfile()}
+          />
+        </View>
+      );
+    }
     if (!profile?.consented_at) return <Redirect href="/consent" />;
-    if (!profile?.onboarded) return <Redirect href="/test" />;
+    // 서버 저장이 실패했어도 로컬에 진단 결과가 있으면 홈으로(테스트 무한 반복 방지)
+    if (!profile?.onboarded && !hasLocalTaste) return <Redirect href="/test" />;
     return <Redirect href="/home" />;
   }
 
@@ -82,5 +103,9 @@ const styles = StyleSheet.create({
   },
   spinner: {
     marginTop: spacing.lg,
+  },
+  retryBtn: {
+    marginTop: spacing.md,
+    minWidth: 220,
   },
 });

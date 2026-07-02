@@ -63,10 +63,10 @@ const styles = StyleSheet.create({
   },
   sm: {
     paddingHorizontal: spacing.sm,
-    paddingVertical: 3,
+    paddingVertical: 4,
   },
   md: {
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs + 2,
+    paddingVertical: spacing.sm - 2, // 6 — pill 높이 리듬 유지
   },
 });

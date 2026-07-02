@@ -54,10 +54,11 @@ export async function markConsented(): Promise<void> {
   if (!sb) return;
   const uid = await currentUserId();
   if (!uid) return;
+  // upsert: handle_new_user 트리거가 실패해 profiles 행이 없어도 자가치유
+  // (update만 쓰면 0행 갱신이 조용히 성공해 동의 게이트 무한 루프에 빠진다)
   const { error } = await sb
     .from('profiles')
-    .update({ consented_at: new Date().toISOString() })
-    .eq('id', uid);
+    .upsert({ id: uid, consented_at: new Date().toISOString() }, { onConflict: 'id' });
   if (error) throw error;
 }
 

@@ -58,7 +58,7 @@ export default function TestRunScreen() {
     submitting.current = true;
     const answers = buildAnswers(finalValues);
     const result = diagnose(answers);
-    track('test_complete', { mainType: result.mainType });
+    track('test_complete');
 
     // 로컬 캐시에 항상 저장(게스트/오프라인도 추천·피드백 동작). base=cur로 시작.
     const snapshot: TasteSnapshot = {

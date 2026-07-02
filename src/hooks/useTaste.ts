@@ -2,7 +2,8 @@
  * useTaste — 현재 취향 스냅샷을 로드(로그인=서버, 아니면 로컬 캐시).
  * 상세 화면의 매칭%, 마이페이지 등에서 사용.
  */
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useFocusEffect } from 'expo-router';
+import { useCallback, useRef, useState } from 'react';
 
 import { fetchMyTaste, type TasteSnapshot } from '@/api/tasteProfiles';
 import { useAuth } from '@/providers/AuthProvider';
@@ -30,12 +31,16 @@ export function useTaste() {
     setLoading(false);
   }, [session]);
 
-  useEffect(() => {
-    void reload();
-    return () => {
-      gen.current++;
-    };
-  }, [reload]);
+  // 탭 화면은 스택 아래에 마운트된 채 남으므로, 포커스 복귀마다 갱신해야
+  // 테스트 완료/재검사 후 홈·마이·사이드바가 이전 유형을 보여주지 않는다.
+  useFocusEffect(
+    useCallback(() => {
+      void reload();
+      return () => {
+        gen.current++;
+      };
+    }, [reload]),
+  );
 
   return { taste, loading, reload };
 }

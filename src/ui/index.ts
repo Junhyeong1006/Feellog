@@ -10,6 +10,7 @@ export { ProgressBar, type ProgressBarProps } from './ProgressBar';
 export { Badge, type BadgeProps, type BadgeTone, type BadgeSize } from './Badge';
 export { Divider, type DividerProps } from './Divider';
 export { Checkbox, type CheckboxProps } from './Checkbox';
+export { Chip, type ChipProps, type ChipSize } from './Chip';
 export { ScreenHeader, type ScreenHeaderProps } from './ScreenHeader';
 export { Dots, type DotsProps } from './Dots';
 export { Logo, type LogoProps } from './Logo';

@@ -21,6 +21,8 @@ export function useCommunity() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [isSample, setIsSample] = useState(true);
   const [loading, setLoading] = useState(true);
+  /** 마지막 로드가 실패했는지(보여줄 게 없을 때 재시도 UI용) */
+  const [error, setError] = useState(false);
   const [liked, setLiked] = useState<Set<string>>(new Set());
   const initialLiked = useRef<Set<string>>(new Set());
   const gen = useRef(0);
@@ -37,19 +39,24 @@ export function useCommunity() {
       if (g !== gen.current) return;
       setPosts(result.posts);
       setIsSample(result.isSample);
-      const server = new Set(likedIds);
-      initialLiked.current = new Set(server);
-      // 진행 중인 좋아요 의도를 서버 스냅샷 위에 덮어써 in-flight 쓰기가 유실되지 않게 한다.
-      const merged = new Set(server);
-      pending.current.forEach((intended, id) => {
-        if (intended) merged.add(id);
-        else merged.delete(id);
-      });
-      setLiked(merged);
+      setError(false);
+      if (hasSession) {
+        const server = new Set(likedIds);
+        initialLiked.current = new Set(server);
+        // 진행 중인 좋아요 의도를 서버 스냅샷 위에 덮어써 in-flight 쓰기가 유실되지 않게 한다.
+        const merged = new Set(server);
+        pending.current.forEach((intended, id) => {
+          if (intended) merged.add(id);
+          else merged.delete(id);
+        });
+        setLiked(merged);
+      }
+      // 게스트: 서버 스냅샷이 없으므로 로컬 좋아요 상태를 유지(재방문마다 초기화되지 않게)
     } catch {
       if (g === gen.current) {
-        setPosts([]);
-        setIsSample(false);
+        // 일시 오류로 이미 보고 있던 피드를 지우지 않는다(빈 화면 + '글이 없어요' 오안내 방지)
+        setPosts((prev) => prev);
+        setError(true);
       }
     } finally {
       if (g === gen.current) setLoading(false);
@@ -108,5 +115,5 @@ export function useCommunity() {
     [load],
   );
 
-  return { posts, isSample, loading, isLiked, likeCountOf, toggleLike, removePost, reload: load };
+  return { posts, isSample, loading, error, isLiked, likeCountOf, toggleLike, removePost, reload: load };
 }

@@ -3,13 +3,13 @@
  * 예약: booking_url 있으면 외부 링크, 없으면(샘플/데모) 완료 상태를 목업으로 표시.
  * 데스크탑: 본문(좌) + 예약·위치 레일(우) 2컬럼, 모바일: 세로 스택 + 하단 고정 예약 버튼.
  */
-import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Linking, ScrollView, StyleSheet, View } from 'react-native';
 
 import { fetchActivity, type AppActivity } from '@/api/activities';
 import { categoryVisual } from '@/components/categoryVisual';
+import { CategoryImage } from '@/components/CategoryImage';
 import { matchScore } from '@/core';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
 import { track } from '@/lib/analytics';
@@ -25,7 +25,7 @@ export default function ActivityDetailScreen() {
   const { isDesktop } = useBreakpoint();
   const [activity, setActivity] = useState<AppActivity | null>(null);
   const [loading, setLoading] = useState(true);
-  const [booked, setBooked] = useState(false);
+  const [bookError, setBookError] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -83,17 +83,16 @@ export default function ActivityDetailScreen() {
   const region = formatRegion(activity.regionSido, activity.regionSigungu);
   const mapQuery = `${activity.partnerName ?? activity.title} ${activity.regionSigungu ?? activity.regionSido ?? ''}`.trim();
 
+  // 예약 링크가 없거나 열기 실패 시 절대 "완료"로 속이지 않는다(시니어 신뢰선)
   const onBook = async () => {
-    track('booking_click', { activityId: activity.id, external: Boolean(activity.bookingUrl) });
-    if (activity.bookingUrl) {
-      try {
-        await Linking.openURL(activity.bookingUrl);
-      } catch {
-        setBooked(true);
-      }
-      return;
+    if (!activity.bookingUrl) return;
+    track('booking_click', { activityId: activity.id });
+    setBookError(false);
+    try {
+      await Linking.openURL(activity.bookingUrl);
+    } catch {
+      setBookError(true);
     }
-    setBooked(true);
   };
 
   const onMap = () => {
@@ -103,11 +102,7 @@ export default function ActivityDetailScreen() {
 
   const hero = (
     <View style={[styles.band, isDesktop && styles.bandDesk, { backgroundColor: visual.accent }]}>
-      {activity.imageUrl ? (
-        <Image source={{ uri: activity.imageUrl }} style={styles.image} contentFit="cover" />
-      ) : (
-        <AppText style={styles.emoji}>{visual.emoji}</AppText>
-      )}
+      <CategoryImage uri={activity.imageUrl} emoji={visual.emoji} emojiSize={84} />
       {score != null && (
         <View style={styles.badgeOverlay}>
           <Badge label={`${score}% 잘 맞아요 · 취향 매칭`} tone="mint" />
@@ -169,13 +164,20 @@ export default function ActivityDetailScreen() {
     </View>
   );
 
-  const bookedNote = (
+  // 예약 CTA: 링크가 있으면 외부 예약, 없으면 준비 중 안내(허위 성공 금지)
+  const bookingAction = activity.bookingUrl ? (
     <View style={styles.bookedRow}>
-      <AppText variant="bodyLg" weight="semibold" color={colors.success}>
-        ✓ 예약이 완료되었어요
-      </AppText>
-      <Button label="추천으로 돌아가기" variant="secondary" onPress={() => router.replace('/reco')} />
+      <Button label="예약하기" onPress={onBook} />
+      {bookError && (
+        <AppText variant="caption" color={colors.danger} center>
+          예약 페이지를 열지 못했어요. 잠시 후 다시 시도해 주세요.
+        </AppText>
+      )}
     </View>
+  ) : (
+    <AppText variant="body" muted center style={styles.noBooking}>
+      온라인 예약은 준비 중이에요.{'\n'}위치를 확인하고 방문해 보세요.
+    </AppText>
   );
 
   if (isDesktop) {
@@ -192,7 +194,7 @@ export default function ActivityDetailScreen() {
                   참가비
                 </AppText>
                 <AppText variant="h2">{formatPrice(activity.price)}</AppText>
-                {booked ? bookedNote : <Button label="예약하기" onPress={onBook} />}
+                {bookingAction}
               </Card>
               {mapCard}
             </View>
@@ -206,7 +208,7 @@ export default function ActivityDetailScreen() {
     <Screen
       edges={['top', 'bottom']}
       noPadding
-      footer={booked ? bookedNote : <Button label="예약하기" onPress={onBook} />}
+      footer={bookingAction}
     >
       <ScreenHeader title="활동 상세" />
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
@@ -346,6 +348,10 @@ const styles = StyleSheet.create({
   },
   bookedRow: {
     gap: spacing.sm,
-    alignItems: 'center',
+    alignSelf: 'stretch',
+  },
+  noBooking: {
+    lineHeight: 26,
+    paddingVertical: spacing.sm,
   },
 });

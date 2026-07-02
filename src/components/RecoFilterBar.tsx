@@ -185,7 +185,7 @@ const styles = StyleSheet.create({
   },
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(45, 45, 45, 0.45)',
+    backgroundColor: colors.scrim,
     justifyContent: 'flex-end',
   },
   sheet: {

@@ -73,7 +73,7 @@ export default function OnboardingScreen() {
 
   const onScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
     const next = Math.round(e.nativeEvent.contentOffset.x / pageWidth);
-    if (next !== index) setIndex(next);
+    if (next >= 0 && next < SLIDES.length && next !== index) setIndex(next);
   };
 
   const finish = async () => {
@@ -166,6 +166,8 @@ export default function OnboardingScreen() {
           horizontal
           pagingEnabled
           showsHorizontalScrollIndicator={false}
+          // 웹(react-native-web)은 onMomentumScrollEnd가 발화하지 않아 onScroll로도 갱신
+          onScroll={onScroll}
           onMomentumScrollEnd={onScroll}
           scrollEventThrottle={16}
         >
@@ -198,14 +200,16 @@ export default function OnboardingScreen() {
 
 const styles = StyleSheet.create({
   header: {
-    height: 44,
+    height: 52,
     justifyContent: 'center',
     alignItems: 'flex-end',
     paddingHorizontal: spacing.lg,
   },
   skip: {
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.sm,
+    // 웹은 hitSlop이 무시되므로 실제 높이로 48dp 확보
+    minHeight: 48,
+    justifyContent: 'center',
+    paddingHorizontal: spacing.md,
   },
   pager: {
     flex: 1,

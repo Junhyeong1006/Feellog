@@ -13,6 +13,7 @@ import { colors, radius, spacing } from '@/tokens';
 import { AppText, Badge, Card } from '@/ui';
 
 import { categoryVisual } from './categoryVisual';
+import { CategoryImage } from './CategoryImage';
 
 export interface PostCardProps {
   post: Post;
@@ -66,11 +67,7 @@ export function PostCard({ post, liked, likeCount, onToggleLike, onDelete, onOpe
 
       {post.hasPhoto && (
         <View style={[styles.photo, { backgroundColor: visual.accent }]}>
-          {post.imageUrl ? (
-            <Image source={{ uri: post.imageUrl }} style={styles.photoImg} contentFit="cover" />
-          ) : (
-            <AppText style={styles.photoEmoji}>{visual.emoji}</AppText>
-          )}
+          <CategoryImage uri={post.imageUrl} emoji={visual.emoji} emojiSize={60} />
         </View>
       )}
 

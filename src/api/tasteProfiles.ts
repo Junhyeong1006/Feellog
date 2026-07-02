@@ -86,19 +86,21 @@ export async function persistTaste(snapshot: TasteSnapshot): Promise<void> {
   const uid = userData.user?.id;
   if (!uid) return;
   const { vector: cur, base } = snapshot;
+  // cur 벡터는 로컬에서 0.1 단위(EMA 정지 방지) — DB 컬럼이 smallint라 저장 시에만 반올림
+  const r = Math.round;
   const { error } = await sb.from('taste_profiles').upsert(
     {
       user_id: uid,
-      base_rhythm: base.rhythm,
-      base_relation: base.relation,
-      base_experience: base.experience,
-      base_participation: base.participation,
-      base_reward: base.reward,
-      cur_rhythm: cur.rhythm,
-      cur_relation: cur.relation,
-      cur_experience: cur.experience,
-      cur_participation: cur.participation,
-      cur_reward: cur.reward,
+      base_rhythm: r(base.rhythm),
+      base_relation: r(base.relation),
+      base_experience: r(base.experience),
+      base_participation: r(base.participation),
+      base_reward: r(base.reward),
+      cur_rhythm: r(cur.rhythm),
+      cur_relation: r(cur.relation),
+      cur_experience: r(cur.experience),
+      cur_participation: r(cur.participation),
+      cur_reward: r(cur.reward),
       main_type: snapshot.mainType,
       sub_trait: snapshot.subTrait,
       trend_score: snapshot.trendScore,

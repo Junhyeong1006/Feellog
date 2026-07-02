@@ -18,7 +18,7 @@ import { useAuth } from '@/providers/AuthProvider';
 import { FONT_SCALE_STEPS, useFontScale } from '@/providers/FontScaleProvider';
 import { clearLocalTaste } from '@/state/tasteCache';
 import { colors, CONTENT_WIDTH, MIN_TOUCH_SIZE, radius, spacing } from '@/tokens';
-import { AppText, Badge, Button, Card, Divider, Screen } from '@/ui';
+import { AppText, Badge, Button, Card, Chip, Divider, Screen } from '@/ui';
 
 export default function MyScreen() {
   const { profile, session, guest, signOut } = useAuth();
@@ -108,27 +108,16 @@ export default function MyScreen() {
       <AppText variant="title">글씨 크기</AppText>
       <Card padding="lg" elevation="soft" style={styles.fontCard}>
         <View style={styles.fontRow}>
-          {FONT_SCALE_STEPS.map((step) => {
-            const active = scale === step.value;
-            return (
-              <Pressable
-                key={step.value}
-                onPress={() => setScale(step.value)}
-                accessibilityRole="button"
-                accessibilityState={{ selected: active }}
-                accessibilityLabel={`글씨 크기 ${step.label}`}
-                style={[styles.fontChip, active && styles.fontChipActive]}
-              >
-                <AppText
-                  variant="body"
-                  weight="semibold"
-                  color={active ? colors.onPrimary : colors.textSecondary}
-                >
-                  {step.label}
-                </AppText>
-              </Pressable>
-            );
-          })}
+          {FONT_SCALE_STEPS.map((step) => (
+            <Chip
+              key={step.value}
+              label={step.label}
+              selected={scale === step.value}
+              onPress={() => setScale(step.value)}
+              accessibilityLabel={`글씨 크기 ${step.label}`}
+              style={styles.fontChip}
+            />
+          ))}
         </View>
         <AppText variant="caption" muted style={styles.fontHint}>
           앱 전체의 글씨가 함께 커져요.
@@ -306,16 +295,6 @@ const styles = StyleSheet.create({
   },
   fontChip: {
     flex: 1,
-    minHeight: MIN_TOUCH_SIZE,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: radius.pill,
-    backgroundColor: colors.surfaceInset,
-    paddingHorizontal: spacing.md,
-  },
-  fontChipActive: {
-    // primaryPressed: 흰 라벨과 WCAG AA(4.7:1) — primary는 3.2:1로 미달
-    backgroundColor: colors.primaryPressed,
   },
   fontHint: {
     textAlign: 'center',

@@ -99,6 +99,11 @@ export const colors = {
   // 보조 버튼('둘러보기')
   secondaryBg: palette.cream2,
   secondaryText: palette.ink,
+
+  /** 모달 배경 딤(시트/다이얼로그 공용) */
+  scrim: 'rgba(31, 29, 24, 0.5)',
+  /** 사진 위 오버레이 버튼 배경(라벨 대비 확보용 진한 딤) */
+  scrimStrong: 'rgba(31, 29, 24, 0.78)',
 } as const;
 
 export type ColorToken = keyof typeof colors;

@@ -75,8 +75,8 @@ create table public.taste_profiles (
 create table public.test_responses (
   id         uuid primary key default gen_random_uuid(),
   user_id    uuid not null references public.profiles(id) on delete cascade,
-  answers    jsonb not null,   -- [{ "q": 1, "value": -2 }, ...]
-  computed   jsonb not null,   -- { "rhythm": .., "main_type": "..", ... }
+  answers    jsonb not null check (pg_column_size(answers) <= 8192),   -- [{ "q": 1, "value": -2 }, ...]
+  computed   jsonb not null check (pg_column_size(computed) <= 8192),  -- { "rhythm": .., "main_type": "..", ... }
   created_at timestamptz not null default now()
 );
 
@@ -149,6 +149,7 @@ create index reactions_user_idx         on public.reactions (user_id);
 create index reactions_activity_idx     on public.reactions (activity_id);
 create index test_responses_user_idx    on public.test_responses (user_id, created_at desc);
 create index analytics_events_name_idx  on public.analytics_events (name, created_at);
+create index analytics_events_user_idx  on public.analytics_events (user_id);
 create index user_consents_user_idx     on public.user_consents (user_id, kind, acted_at desc);
 
 -- ─────────────────────────────── 신규 소셜 가입 시 profiles 자동 생성 ───────────────────────────────
@@ -213,7 +214,7 @@ begin
   delete from auth.users where id = auth.uid();
 end;
 $$;
-revoke execute on function public.delete_my_account() from anon;
+revoke execute on function public.delete_my_account() from public, anon;
 grant execute on function public.delete_my_account() to authenticated;
 
 -- ─────────────────────────────── RLS ───────────────────────────────
@@ -245,12 +246,23 @@ create policy "reactions self insert" on public.reactions for insert with check 
 create policy "reactions self select" on public.reactions for select using (auth.uid() = user_id);
 create policy "reactions self delete" on public.reactions for delete using (auth.uid() = user_id);
 
--- analytics_events: 삽입만(로그인=본인, 익명=user_id null). 조회는 service_role만.
-create policy "analytics insert" on public.analytics_events for insert with check (user_id is null or auth.uid() = user_id);
+-- analytics_events: 로그인 사용자 본인 것만 삽입(익명 무제한 insert는 저장소 고갈 DoS 벡터라 차단).
+-- (익명 분석은 PostHog 클라이언트 레이어가 담당) 조회는 service_role만.
+create policy "analytics insert" on public.analytics_events for insert to authenticated with check (auth.uid() = user_id);
 
 -- user_consents: 본인 select/insert만 (UPDATE/DELETE 정책 없음 = 이력 무결성)
 create policy "consents self select" on public.user_consents for select using (auth.uid() = user_id);
 create policy "consents self insert" on public.user_consents for insert with check (auth.uid() = user_id);
+
+-- 클라이언트 insert는 필요한 컬럼만 허용(acted_at/created_at/id 위조 방지 — default·identity만 채움)
+revoke insert on public.user_consents from anon, authenticated;
+grant insert (user_id, kind, granted, doc_version, method) on public.user_consents to authenticated;
+revoke insert on public.test_responses from anon, authenticated;
+grant insert (user_id, answers, computed) on public.test_responses to authenticated;
+revoke insert on public.reactions from anon, authenticated;
+grant insert (user_id, activity_id, kind) on public.reactions to authenticated;
+revoke insert on public.analytics_events from anon, authenticated;
+grant insert (user_id, name, props) on public.analytics_events to authenticated;
 
 -- RLS FORCE (심층방어). profiles는 handle_new_user(SECURITY DEFINER) 트리거 insert가 막힐 수 있어 제외.
 alter table public.taste_profiles   force row level security;

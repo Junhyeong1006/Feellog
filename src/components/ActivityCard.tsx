@@ -3,7 +3,6 @@
  * 상단 이미지 밴드(이미지 없으면 카테고리 이모지) + 매칭% 배지 + 제목/요약/키워드/메타.
  * onPressDetail을 주면 카드 전체가 상세로 이동한다.
  */
-import { Image } from 'expo-image';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import type { AppActivity } from '@/api/activities';
@@ -12,6 +11,7 @@ import { AppText, Badge } from '@/ui';
 import { formatDuration, formatPrice, formatRegion } from '@/utils/format';
 
 import { categoryVisual } from './categoryVisual';
+import { CategoryImage } from './CategoryImage';
 
 export interface ActivityCardProps {
   activity: AppActivity;
@@ -29,11 +29,7 @@ export function ActivityCard({ activity, score, onPressDetail, bandHeight = 150 
   const body = (
     <>
       <View style={[styles.band, { height: bandHeight, backgroundColor: visual.accent }]}>
-        {activity.imageUrl ? (
-          <Image source={{ uri: activity.imageUrl }} style={styles.image} contentFit="cover" />
-        ) : (
-          <AppText style={styles.emoji}>{visual.emoji}</AppText>
-        )}
+        <CategoryImage uri={activity.imageUrl} emoji={visual.emoji} emojiSize={68} />
         {score != null && (
           <View style={styles.badgeOverlay}>
             <Badge label={`${score}% 잘 맞아요`} tone="mint" />
@@ -99,6 +95,8 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.surface,
     borderRadius: radius.xl,
+    borderWidth: 1,
+    borderColor: colors.borderOnWhite,
     overflow: 'hidden',
     ...shadows.raised,
   },

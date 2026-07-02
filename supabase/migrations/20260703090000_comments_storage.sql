@@ -129,3 +129,15 @@ create policy "post images self upload" on storage.objects for insert to authent
   );
 create policy "post images self delete" on storage.objects for delete to authenticated
   using (bucket_id = 'post-images' and (storage.foldername(name))[1] = auth.uid()::text);
+
+-- ─────────────── 계정 삭제 시 업로드 사진도 정리(잊혀질 권리 — init.sql 함수 교체) ───────────────
+create or replace function public.delete_my_account()
+returns void language plpgsql security definer set search_path = '' as $$
+begin
+  -- 공개 버킷에 남으면 계정 삭제 후에도 사진이 접근 가능하므로 먼저 지운다
+  delete from storage.objects
+    where bucket_id = 'post-images'
+      and (storage.foldername(name))[1] = auth.uid()::text;
+  delete from auth.users where id = auth.uid();
+end;
+$$;

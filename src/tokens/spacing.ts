@@ -39,6 +39,8 @@ export const SIDEBAR_WIDTH = 264;
 export const CONTENT_WIDTH = {
   /** 폰 컬럼(기본) — 몰입형 플로우(로그인·테스트 진행 등) */
   phone: MAX_CONTENT_WIDTH,
+  /** 집중 카드 1장(추천 피드) */
+  focus: 620,
   /** 읽기 컬럼 — 피드·문서·작성 */
   reading: 680,
   /** 넓은 콘텐츠 — 상세·결과 2컬럼 */

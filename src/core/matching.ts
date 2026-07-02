@@ -19,28 +19,24 @@ function clamp01(v: number): number {
   return v < 0 ? 0 : v > 1 ? 1 : v;
 }
 
-/** 하드필터 통과 여부 (지역/예산/시간/강도) */
+/**
+ * 하드필터 통과 여부 (지역/예산/시간/강도).
+ * 엄격 의미론(§2.3.2): 필터가 켜져 있는데 활동의 해당 값이 null(미입력)이면 제외한다.
+ * — '무료만'을 골랐는데 가격 미입력 유료 클래스가 '무료'로 보이는 사고 방지.
+ */
 export function passesFilter(activity: Activity, filter?: RecoFilter): boolean {
   if (!filter) return true;
-  if (filter.regionSido && activity.regionSido && activity.regionSido !== filter.regionSido) {
-    return false;
+  if (filter.regionSido != null) {
+    if (activity.regionSido == null || activity.regionSido !== filter.regionSido) return false;
   }
-  if (filter.maxPrice != null && activity.price != null && activity.price > filter.maxPrice) {
-    return false;
+  if (filter.maxPrice != null) {
+    if (activity.price == null || activity.price > filter.maxPrice) return false;
   }
-  if (
-    filter.maxDurationMin != null &&
-    activity.durationMin != null &&
-    activity.durationMin > filter.maxDurationMin
-  ) {
-    return false;
+  if (filter.maxDurationMin != null) {
+    if (activity.durationMin == null || activity.durationMin > filter.maxDurationMin) return false;
   }
-  if (
-    filter.maxIntensity != null &&
-    activity.intensity != null &&
-    activity.intensity > filter.maxIntensity
-  ) {
-    return false;
+  if (filter.maxIntensity != null) {
+    if (activity.intensity == null || activity.intensity > filter.maxIntensity) return false;
   }
   return true;
 }
