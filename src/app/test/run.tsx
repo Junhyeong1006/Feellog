@@ -2,6 +2,7 @@
  * 성향 테스트 진행 — 한 문항씩 두 장면 비교. 끌리는 쪽을 누르면 다음으로.
  * '비슷해요'는 중립(0). 뒤로가기로 이전 문항 수정 가능. 마지막에 진단→결과로 이동.
  * 로그인 상태면 결과를 저장(taste_profiles/test_responses/onboarded).
+ * 데스크탑: 두 장면을 좌우 나란히 비교(기획 의도 그대로).
  */
 import { router } from 'expo-router';
 import { useRef, useState } from 'react';
@@ -10,15 +11,18 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { saveDiagnosis } from '@/api/diagnosis';
 import type { TasteSnapshot } from '@/api/tasteProfiles';
 import { diagnose, QUESTIONS, type Answer, type AnswerValue } from '@/core';
+import { useBreakpoint } from '@/hooks/useBreakpoint';
+import { track } from '@/lib/analytics';
 import { useAuth } from '@/providers/AuthProvider';
 import { setLocalTaste } from '@/state/tasteCache';
-import { colors, palette, radius, shadows, spacing } from '@/tokens';
+import { colors, CONTENT_WIDTH, palette, radius, shadows, spacing } from '@/tokens';
 import { AppText, ProgressBar, Screen, ScreenHeader } from '@/ui';
 
 const TOTAL = QUESTIONS.length;
 
 export default function TestRunScreen() {
   const { session, refreshProfile } = useAuth();
+  const { isDesktop } = useBreakpoint();
   const [idx, setIdx] = useState(0);
   const [values, setValues] = useState<(AnswerValue | null)[]>(() => Array(TOTAL).fill(null));
   const submitting = useRef(false);
@@ -34,6 +38,7 @@ export default function TestRunScreen() {
     submitting.current = true;
     const answers = buildAnswers(finalValues);
     const result = diagnose(answers);
+    track('test_complete', { mainType: result.mainType });
 
     // 로컬 캐시에 항상 저장(게스트/오프라인도 추천·피드백 동작). base=cur로 시작.
     const snapshot: TasteSnapshot = {
@@ -73,7 +78,7 @@ export default function TestRunScreen() {
   };
 
   return (
-    <Screen edges={['top', 'bottom']} noPadding>
+    <Screen edges={['top', 'bottom']} noPadding maxWidth={isDesktop ? CONTENT_WIDTH.wide : undefined}>
       <ScreenHeader
         onBack={goBack}
         right={
@@ -95,7 +100,7 @@ export default function TestRunScreen() {
           더 끌리는 쪽을 눌러주세요
         </AppText>
 
-        <View style={styles.options}>
+        <View style={[styles.options, isDesktop && styles.optionsRow]}>
           <OptionCard
             poleLabel={question.leftAxisLabel}
             title={question.left.title}
@@ -103,6 +108,7 @@ export default function TestRunScreen() {
             accent={colors.primaryTint}
             poleColor={colors.primaryPressed}
             selected={selected === -2}
+            wide={isDesktop}
             onPress={() => select(-2)}
           />
           <OptionCard
@@ -112,6 +118,7 @@ export default function TestRunScreen() {
             accent={palette.mint}
             poleColor={palette.mintDeep}
             selected={selected === 2}
+            wide={isDesktop}
             onPress={() => select(2)}
           />
         </View>
@@ -138,10 +145,12 @@ interface OptionCardProps {
   accent: string;
   poleColor: string;
   selected: boolean;
+  /** 데스크탑 좌우 배치용(카드가 행 안에서 균등 분할) */
+  wide?: boolean;
   onPress: () => void;
 }
 
-function OptionCard({ poleLabel, title, desc, accent, poleColor, selected, onPress }: OptionCardProps) {
+function OptionCard({ poleLabel, title, desc, accent, poleColor, selected, wide, onPress }: OptionCardProps) {
   return (
     <Pressable
       onPress={onPress}
@@ -149,11 +158,12 @@ function OptionCard({ poleLabel, title, desc, accent, poleColor, selected, onPre
       accessibilityLabel={`${title}. ${desc}`}
       style={({ pressed }) => [
         styles.card,
+        wide && styles.cardWide,
         selected && styles.cardSelected,
         pressed && styles.cardPressed,
       ]}
     >
-      <View style={[styles.band, { backgroundColor: accent }]}>
+      <View style={[styles.band, wide && styles.bandWide, { backgroundColor: accent }]}>
         <AppText variant="title" weight="bold" color={poleColor}>
           {poleLabel}
         </AppText>
@@ -192,6 +202,11 @@ const styles = StyleSheet.create({
   options: {
     gap: spacing.base,
   },
+  optionsRow: {
+    flexDirection: 'row',
+    gap: spacing.xl,
+    alignItems: 'stretch',
+  },
   card: {
     backgroundColor: colors.surface,
     borderRadius: radius.xl,
@@ -199,6 +214,12 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: 'transparent',
     ...shadows.card,
+  },
+  cardWide: {
+    flex: 1,
+  },
+  bandWide: {
+    height: 120,
   },
   cardSelected: {
     borderColor: colors.primary,

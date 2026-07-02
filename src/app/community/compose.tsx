@@ -7,7 +7,10 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 
 import { createPost } from '@/api/community';
-import { colors, fontFamily, MIN_TOUCH_SIZE, radius, spacing, typography } from '@/tokens';
+import { useBreakpoint } from '@/hooks/useBreakpoint';
+import { track } from '@/lib/analytics';
+import { useFontScale } from '@/providers/FontScaleProvider';
+import { colors, CONTENT_WIDTH, fontFamily, MIN_TOUCH_SIZE, radius, spacing, typography } from '@/tokens';
 import { AppText, Button, Screen, ScreenHeader } from '@/ui';
 
 const MAX = 2000;
@@ -17,6 +20,8 @@ const CATEGORY_OPTIONS = [
 ];
 
 export default function ComposeScreen() {
+  const { isDesktop } = useBreakpoint();
+  const { scale } = useFontScale();
   const [body, setBody] = useState('');
   const [category, setCategory] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -31,6 +36,7 @@ export default function ComposeScreen() {
     setSubmitting(true);
     try {
       await createPost({ body: trimmed, category });
+      track('post_create', { hasCategory: category != null });
       setSubmitting(false);
       setBody('');
       // 히스토리가 없을 수 있으니(딥링크/새로고침 진입) 안전하게 복귀. 커뮤니티는 포커스 시 새로고침.
@@ -46,6 +52,7 @@ export default function ComposeScreen() {
     <Screen
       edges={['top', 'bottom']}
       noPadding
+      maxWidth={isDesktop ? CONTENT_WIDTH.reading : undefined}
       footer={<Button label="올리기" onPress={submit} loading={submitting} disabled={!canSubmit} />}
     >
       <ScreenHeader title="글쓰기" />
@@ -58,7 +65,14 @@ export default function ComposeScreen() {
           placeholderTextColor={colors.textMuted}
           multiline
           textAlignVertical="top"
-          style={styles.input}
+          // TextInput은 AppText 스케일링을 못 받으므로 글씨 크기 토글을 직접 반영
+          style={[
+            styles.input,
+            scale !== 1 && {
+              fontSize: Math.round(typography.body.fontSize * scale),
+              lineHeight: Math.round(typography.body.lineHeight * scale),
+            },
+          ]}
           accessibilityLabel="글 내용"
         />
         <AppText variant="caption" muted style={styles.counter}>
@@ -136,7 +150,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   chipActive: {
-    backgroundColor: colors.primary,
+    // primaryPressed: 흰 라벨과 WCAG AA(4.7:1) — primary는 3.2:1로 미달
+    backgroundColor: colors.primaryPressed,
   },
   chipInactive: {
     backgroundColor: colors.surfaceInset,

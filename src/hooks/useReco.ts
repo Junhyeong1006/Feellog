@@ -1,13 +1,15 @@
 /**
  * useReco — 오늘의 추천 덱 관리 + 좋아요/관심없어요 피드백 반영.
  * 로드: 취향 벡터 + 활동 + (로그인 시)기존 반응 → 추천 정렬 후 반응한 건 제외(loadReco).
- * react(): 현재벡터를 EMA 보정 → 로컬 캐시 저장 + (로그인 시) 서버 반영, 다음 카드로.
+ * react(): 현재벡터를 EMA 보정 → 남은 덱을 새 벡터로 즉시 재정렬(S7 온라인 보정)
+ *          → 로컬 캐시 저장 + (로그인 시) 서버 반영, 다음 카드로.
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { upsertReaction } from '@/api/reactions';
 import { persistTaste, type TasteSnapshot } from '@/api/tasteProfiles';
-import { applyFeedback } from '@/core';
+import { applyFeedback, matchScore } from '@/core';
+import { track } from '@/lib/analytics';
 import { useAuth } from '@/providers/AuthProvider';
 import { setLocalTaste } from '@/state/tasteCache';
 
@@ -27,6 +29,8 @@ export function useReco() {
   const loadGen = useRef(0);
   /** 처리 중인 카드 id — 같은 카드 더블탭으로 피드백이 두 번 적용되는 것 방지. */
   const inFlight = useRef<Set<string>>(new Set());
+  /** 서버 저장 직렬화 큐 — 연속 반응 시 늦게 끝난 이전 스냅샷이 최신을 덮어쓰지 않게. */
+  const persistQueue = useRef<Promise<void>>(Promise.resolve());
 
   const load = useCallback(async () => {
     const gen = ++loadGen.current;
@@ -73,16 +77,35 @@ export function useReco() {
         feedbackCount: taste.feedbackCount + 1,
       };
       tasteRef.current = nextSnap;
-      await setLocalTaste(nextSnap);
 
-      try {
-        await upsertReaction(id, liked ? 'like' : 'dislike');
-        if (hasSession) await persistTaste(nextSnap);
-      } catch {
-        // 저장 실패해도 UX는 계속(로컬 캐시엔 반영됨)
-      } finally {
-        inFlight.current.delete(id);
-      }
+      // S7 온라인 보정: 아직 안 본 카드들을 보정된 벡터로 재점수·재정렬
+      // (지나간 카드 순서는 유지해 인덱스가 흔들리지 않게 한다)
+      setDeck((prev) => {
+        const pos = prev.findIndex((d) => d.activity.id === id);
+        if (pos < 0 || pos + 1 >= prev.length) return prev;
+        const rest = prev
+          .slice(pos + 1)
+          .map((d) => ({ activity: d.activity, score: matchScore(nextVec, d.activity.vector) }))
+          .sort((a, b) => b.score - a.score);
+        return [...prev.slice(0, pos + 1), ...rest];
+      });
+
+      track('reco_react', { liked, activityId: id });
+
+      // 저장은 큐로 직렬화하고, 항상 실행 시점의 최신 스냅샷(tasteRef)을 쓴다
+      // → 연속 반응이 겹쳐도 서버/로컬에 마지막 상태가 남는다.
+      persistQueue.current = persistQueue.current.then(async () => {
+        try {
+          await setLocalTaste(tasteRef.current);
+          await upsertReaction(id, liked ? 'like' : 'dislike');
+          if (hasSession) await persistTaste(tasteRef.current);
+        } catch {
+          // 저장 실패해도 UX는 계속(로컬 캐시엔 반영됨)
+        } finally {
+          inFlight.current.delete(id);
+        }
+      });
+      await persistQueue.current;
     },
     [hasSession],
   );

@@ -18,6 +18,8 @@ import type { Session, User } from '@supabase/supabase-js';
 import { signOut as apiSignOut } from '@/api/auth';
 import { fetchMyProfile, type Profile } from '@/api/profiles';
 import { getSupabase, isSupabaseConfigured } from '@/api/supabase';
+import { identify } from '@/lib/analytics';
+import { useFontScale } from '@/providers/FontScaleProvider';
 import { getGuest, setGuest as persistGuest } from '@/state/appFlags';
 
 interface AuthContextValue {
@@ -47,17 +49,21 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [profileLoading, setProfileLoading] = useState(false);
   const [guest, setGuestState] = useState(false);
+  const { adoptServerScale } = useFontScale();
 
   const loadProfile = useCallback(async () => {
     setProfileLoading(true);
     try {
-      setProfile(await fetchMyProfile());
+      const next = await fetchMyProfile();
+      setProfile(next);
+      // 다른 기기에서 설정한 글씨 크기를 이어받는다(기본값 1은 로컬 설정 유지)
+      adoptServerScale(next?.font_scale);
     } catch {
       setProfile(null);
     } finally {
       setProfileLoading(false);
     }
-  }, []);
+  }, [adoptServerScale]);
 
   // 최초: 세션 + 게스트 플래그 로드
   useEffect(() => {
@@ -71,6 +77,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       ]);
       if (!mounted) return;
       setSession(initialSession);
+      identify(initialSession?.user.id ?? null);
       setGuestState(guestFlag);
       if (initialSession) await loadProfile();
       if (mounted) setLoading(false);
@@ -78,6 +85,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
     const sub = sb?.auth.onAuthStateChange((_event, nextSession) => {
       setSession(nextSession);
+      identify(nextSession?.user.id ?? null);
       if (nextSession) {
         // 로그인되면 게스트 상태 해제 + 프로필 로드
         setGuestState(false);

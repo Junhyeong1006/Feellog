@@ -4,7 +4,15 @@
  */
 export { colors, palette, brand, type ColorToken, type BrandToken } from './colors';
 export { typography, fontFamily, fontWeight, type TypographyToken } from './typography';
-export { spacing, MIN_TOUCH_SIZE, MAX_CONTENT_WIDTH, type SpacingToken } from './spacing';
+export {
+  spacing,
+  MIN_TOUCH_SIZE,
+  MAX_CONTENT_WIDTH,
+  BREAKPOINTS,
+  SIDEBAR_WIDTH,
+  CONTENT_WIDTH,
+  type SpacingToken,
+} from './spacing';
 export { radius, type RadiusToken } from './radius';
 export { shadows, type ShadowToken } from './shadows';
 

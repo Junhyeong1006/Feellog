@@ -5,8 +5,14 @@
  *
  * 접근성: allowFontScaling 기본 true(시니어 OS 글자 크기 확대 존중).
  */
-import { Text as RNText, StyleSheet, type TextProps as RNTextProps } from 'react-native';
+import {
+  Text as RNText,
+  StyleSheet,
+  type TextProps as RNTextProps,
+  type TextStyle,
+} from 'react-native';
 
+import { useFontScale } from '@/providers/FontScaleProvider';
 import { colors, fontFamily, fontWeight, typography, type TypographyToken } from '@/tokens';
 
 export interface AppTextProps extends RNTextProps {
@@ -31,20 +37,30 @@ export function AppText({
   style,
   ...rest
 }: AppTextProps) {
-  return (
-    <RNText
-      style={[
-        styles.base,
-        typography[variant],
-        muted && { color: colors.textSecondary },
-        color && { color },
-        weight && { fontWeight: fontWeight[weight] },
-        center && styles.center,
-        style,
-      ]}
-      {...rest}
-    />
-  );
+  const { scale } = useFontScale();
+
+  // 호출부의 고정 fontSize/lineHeight까지 포함해 최종 스타일에 배율을 곱한다
+  // (merge 이후 적용해야 앱 내 글씨 크기 토글에서 줄 높이가 잘리지 않음)
+  const merged = StyleSheet.flatten<TextStyle>([
+    styles.base,
+    typography[variant],
+    muted && { color: colors.textSecondary },
+    color ? { color } : null,
+    weight && { fontWeight: fontWeight[weight] },
+    center && styles.center,
+    style,
+  ]);
+
+  const scaled: TextStyle =
+    scale === 1
+      ? merged
+      : {
+          ...merged,
+          ...(merged.fontSize != null && { fontSize: Math.round(merged.fontSize * scale) }),
+          ...(merged.lineHeight != null && { lineHeight: Math.round(merged.lineHeight * scale) }),
+        };
+
+  return <RNText style={scaled} {...rest} />;
 }
 
 const styles = StyleSheet.create({

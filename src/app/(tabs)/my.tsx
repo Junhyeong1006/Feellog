@@ -1,6 +1,7 @@
 /**
- * 마이 탭 — 프로필 + 좋아요한 활동 + 설정(약관/로그아웃/계정삭제).
+ * 마이 탭 — 프로필 + 좋아요한 활동 + 글씨 크기(접근성) + 설정(약관/로그아웃/계정삭제).
  * 계정삭제는 잊혀질 권리(RPC). 게스트는 로그인 유도.
+ * 데스크탑: [프로필 | 활동·설정] 2컬럼.
  */
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
@@ -10,17 +11,21 @@ import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 import { deleteMyAccount, displayNameOf } from '@/api/profiles';
 import { ActivityListItem } from '@/components/ActivityListItem';
 import { TYPE_META } from '@/core';
+import { useBreakpoint } from '@/hooks/useBreakpoint';
 import { useLikedActivities } from '@/hooks/useLikedActivities';
 import { useTaste } from '@/hooks/useTaste';
 import { useAuth } from '@/providers/AuthProvider';
+import { FONT_SCALE_STEPS, useFontScale } from '@/providers/FontScaleProvider';
 import { clearLocalTaste } from '@/state/tasteCache';
-import { colors, radius, spacing } from '@/tokens';
+import { colors, CONTENT_WIDTH, MIN_TOUCH_SIZE, radius, spacing } from '@/tokens';
 import { AppText, Badge, Button, Card, Divider, Screen } from '@/ui';
 
 export default function MyScreen() {
   const { profile, session, guest, signOut } = useAuth();
   const { taste } = useTaste();
   const { items: liked, loading: likedLoading } = useLikedActivities();
+  const { scale, setScale } = useFontScale();
+  const { isDesktop } = useBreakpoint();
 
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -49,104 +54,166 @@ export default function MyScreen() {
     }
   };
 
+  const profileSection = (
+    <View style={styles.profile}>
+      <View style={styles.avatar}>
+        {profile?.avatar_url ? (
+          <Image source={{ uri: profile.avatar_url }} style={styles.avatarImg} contentFit="cover" />
+        ) : (
+          <AppText variant="h1" color={colors.primary}>
+            {initial}
+          </AppText>
+        )}
+      </View>
+      <AppText variant="h2">{name}</AppText>
+      {type && <Badge label={type.label} tone="primary" />}
+    </View>
+  );
+
+  const guestCard = guest && !session && (
+    <Card padding="lg" style={styles.guestCard}>
+      <AppText variant="body" muted center style={styles.guestText}>
+        로그인하면 좋아요한 활동과 성향 결과가 저장돼요.
+      </AppText>
+      <Button label="로그인하기" onPress={() => router.replace('/login')} />
+    </Card>
+  );
+
+  const likedSection = session && (
+    <View style={styles.section}>
+      <AppText variant="title">좋아요한 활동</AppText>
+      <Card padding="lg" elevation="soft">
+        {likedLoading ? (
+          <View style={styles.likedLoading}>
+            <ActivityIndicator color={colors.primary} />
+          </View>
+        ) : liked.length > 0 ? (
+          liked.map((a, i) => (
+            <View key={a.id}>
+              {i > 0 && <Divider gap="xs" />}
+              <ActivityListItem activity={a} onPress={() => router.push(`/activity/${a.id}`)} />
+            </View>
+          ))
+        ) : (
+          <AppText variant="body" muted center style={styles.likedEmpty}>
+            아직 좋아요한 활동이 없어요.{'\n'}추천에서 마음에 드는 활동을 골라보세요.
+          </AppText>
+        )}
+      </Card>
+    </View>
+  );
+
+  const fontSection = (
+    <View style={styles.section}>
+      <AppText variant="title">글씨 크기</AppText>
+      <Card padding="lg" elevation="soft" style={styles.fontCard}>
+        <View style={styles.fontRow}>
+          {FONT_SCALE_STEPS.map((step) => {
+            const active = scale === step.value;
+            return (
+              <Pressable
+                key={step.value}
+                onPress={() => setScale(step.value)}
+                accessibilityRole="button"
+                accessibilityState={{ selected: active }}
+                accessibilityLabel={`글씨 크기 ${step.label}`}
+                style={[styles.fontChip, active && styles.fontChipActive]}
+              >
+                <AppText
+                  variant="body"
+                  weight="semibold"
+                  color={active ? colors.onPrimary : colors.textSecondary}
+                >
+                  {step.label}
+                </AppText>
+              </Pressable>
+            );
+          })}
+        </View>
+        <AppText variant="caption" muted style={styles.fontHint}>
+          앱 전체의 글씨가 함께 커져요.
+        </AppText>
+      </Card>
+    </View>
+  );
+
+  const settingsSection = (
+    <View style={styles.section}>
+      <AppText variant="title">설정</AppText>
+      <Card padding="lg" elevation="soft">
+        <SettingRow label="이용약관" onPress={() => router.push('/legal/terms')} />
+        <Divider gap="xs" />
+        <SettingRow label="개인정보처리방침" onPress={() => router.push('/legal/privacy')} />
+        {session && (
+          <>
+            <Divider gap="xs" />
+            <SettingRow label="로그아웃" onPress={onLogout} />
+            <Divider gap="xs" />
+            <SettingRow label="계정 삭제" danger onPress={() => setConfirmingDelete(true)} />
+          </>
+        )}
+      </Card>
+    </View>
+  );
+
+  const deleteConfirm = confirmingDelete && (
+    <Card padding="lg" style={styles.deleteCard}>
+      <AppText variant="title" color={colors.danger}>
+        정말 계정을 삭제할까요?
+      </AppText>
+      <AppText variant="body" muted style={styles.deleteBody}>
+        프로필, 성향 결과, 좋아요 기록이 모두 삭제되며 되돌릴 수 없어요.
+      </AppText>
+      {error != null && (
+        <AppText variant="caption" color={colors.danger}>
+          {error}
+        </AppText>
+      )}
+      <View style={styles.deleteActions}>
+        <View style={styles.deleteActionItem}>
+          <Button
+            label="취소"
+            variant="secondary"
+            onPress={() => setConfirmingDelete(false)}
+            disabled={deleting}
+          />
+        </View>
+        <View style={styles.deleteActionItem}>
+          <Button label="삭제하기" variant="danger" onPress={onDelete} loading={deleting} />
+        </View>
+      </View>
+    </Card>
+  );
+
+  if (isDesktop) {
+    return (
+      <Screen edges={['top']} scroll maxWidth={CONTENT_WIDTH.wide} contentStyle={styles.content}>
+        <View style={styles.columns}>
+          <View style={styles.leftCol}>
+            <Card padding="xl" elevation="soft">
+              {profileSection}
+            </Card>
+            {guestCard}
+          </View>
+          <View style={styles.rightCol}>
+            {likedSection}
+            {fontSection}
+            {settingsSection}
+            {deleteConfirm}
+          </View>
+        </View>
+      </Screen>
+    );
+  }
+
   return (
     <Screen edges={['top']} scroll contentStyle={styles.content}>
-      {/* 프로필 */}
-      <View style={styles.profile}>
-        <View style={styles.avatar}>
-          {profile?.avatar_url ? (
-            <Image source={{ uri: profile.avatar_url }} style={styles.avatarImg} contentFit="cover" />
-          ) : (
-            <AppText variant="h1" color={colors.primary}>
-              {initial}
-            </AppText>
-          )}
-        </View>
-        <AppText variant="h2">{name}</AppText>
-        {type && <Badge label={type.label} tone="primary" />}
-      </View>
-
-      {guest && !session && (
-        <Card padding="lg" style={styles.guestCard}>
-          <AppText variant="body" muted center style={styles.guestText}>
-            로그인하면 좋아요한 활동과 성향 결과가 저장돼요.
-          </AppText>
-          <Button label="로그인하기" onPress={() => router.replace('/login')} />
-        </Card>
-      )}
-
-      {/* 좋아요한 활동 */}
-      {session && (
-        <View style={styles.section}>
-          <AppText variant="title">좋아요한 활동</AppText>
-          <Card padding="lg" elevation="soft">
-            {likedLoading ? (
-              <View style={styles.likedLoading}>
-                <ActivityIndicator color={colors.primary} />
-              </View>
-            ) : liked.length > 0 ? (
-              liked.map((a, i) => (
-                <View key={a.id}>
-                  {i > 0 && <Divider gap="xs" />}
-                  <ActivityListItem activity={a} onPress={() => router.push(`/activity/${a.id}`)} />
-                </View>
-              ))
-            ) : (
-              <AppText variant="body" muted center style={styles.likedEmpty}>
-                아직 좋아요한 활동이 없어요.{'\n'}추천에서 마음에 드는 활동을 골라보세요.
-              </AppText>
-            )}
-          </Card>
-        </View>
-      )}
-
-      {/* 설정 */}
-      <View style={styles.section}>
-        <AppText variant="title">설정</AppText>
-        <Card padding="lg" elevation="soft">
-          <SettingRow label="이용약관" onPress={() => router.push('/legal/terms')} />
-          <Divider gap="xs" />
-          <SettingRow label="개인정보처리방침" onPress={() => router.push('/legal/privacy')} />
-          {session && (
-            <>
-              <Divider gap="xs" />
-              <SettingRow label="로그아웃" onPress={onLogout} />
-              <Divider gap="xs" />
-              <SettingRow label="계정 삭제" danger onPress={() => setConfirmingDelete(true)} />
-            </>
-          )}
-        </Card>
-      </View>
-
-      {/* 계정 삭제 확인 */}
-      {confirmingDelete && (
-        <Card padding="lg" style={styles.deleteCard}>
-          <AppText variant="title" color={colors.danger}>
-            정말 계정을 삭제할까요?
-          </AppText>
-          <AppText variant="body" muted style={styles.deleteBody}>
-            프로필, 성향 결과, 좋아요 기록이 모두 삭제되며 되돌릴 수 없어요.
-          </AppText>
-          {error != null && (
-            <AppText variant="caption" color={colors.danger}>
-              {error}
-            </AppText>
-          )}
-          <View style={styles.deleteActions}>
-            <View style={styles.deleteActionItem}>
-              <Button
-                label="취소"
-                variant="secondary"
-                onPress={() => setConfirmingDelete(false)}
-                disabled={deleting}
-              />
-            </View>
-            <View style={styles.deleteActionItem}>
-              <Button label="삭제하기" variant="danger" onPress={onDelete} loading={deleting} />
-            </View>
-          </View>
-        </Card>
-      )}
+      {profileSection}
+      {guestCard}
+      {likedSection}
+      {fontSection}
+      {settingsSection}
+      {deleteConfirm}
     </Screen>
   );
 }
@@ -183,6 +250,19 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xxl,
     gap: spacing.xl,
   },
+  columns: {
+    flexDirection: 'row',
+    gap: spacing.xl,
+    alignItems: 'flex-start',
+  },
+  leftCol: {
+    width: 300,
+    gap: spacing.xl,
+  },
+  rightCol: {
+    flex: 1,
+    gap: spacing.xl,
+  },
   profile: {
     alignItems: 'center',
     gap: spacing.sm,
@@ -216,6 +296,29 @@ const styles = StyleSheet.create({
   likedEmpty: {
     paddingVertical: spacing.base,
     lineHeight: 26,
+  },
+  fontCard: {
+    gap: spacing.md,
+  },
+  fontRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  fontChip: {
+    flex: 1,
+    minHeight: MIN_TOUCH_SIZE,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radius.pill,
+    backgroundColor: colors.surfaceInset,
+    paddingHorizontal: spacing.md,
+  },
+  fontChipActive: {
+    // primaryPressed: 흰 라벨과 WCAG AA(4.7:1) — primary는 3.2:1로 미달
+    backgroundColor: colors.primaryPressed,
+  },
+  fontHint: {
+    textAlign: 'center',
   },
   settingRow: {
     flexDirection: 'row',

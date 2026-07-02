@@ -29,6 +29,12 @@ export interface ScreenProps {
   /** SafeArea 적용 가장자리 */
   edges?: readonly Edge[];
   contentStyle?: StyleProp<ViewStyle>;
+  /**
+   * 콘텐츠 최대 너비 override (기본 MAX_CONTENT_WIDTH=480).
+   * 데스크탑 레이아웃은 CONTENT_WIDTH 프리셋(reading/wide/dashboard)을 넘긴다.
+   * 작은 창에서는 어차피 100%로 줄어들므로 모바일에 영향 없음.
+   */
+  maxWidth?: number;
 }
 
 const DEFAULT_EDGES: readonly Edge[] = ['top', 'bottom'];
@@ -41,12 +47,13 @@ export function Screen({
   noPadding = false,
   edges = DEFAULT_EDGES,
   contentStyle,
+  maxWidth,
 }: ScreenProps) {
   const padStyle = noPadding ? null : styles.padded;
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: background }]} edges={edges}>
-      <View style={styles.centering}>
+      <View style={[styles.centering, maxWidth != null && { maxWidth }]}>
         {scroll ? (
           <ScrollView
             style={styles.flex}

@@ -1,6 +1,7 @@
 /**
  * 활동 상세 — 매칭% + 요약 + 메타(지역/소요/참가비/강도) + 지도 미리보기 + 예약.
  * 예약: booking_url 있으면 외부 링크, 없으면(샘플/데모) 완료 상태를 목업으로 표시.
+ * 데스크탑: 본문(좌) + 예약·위치 레일(우) 2컬럼, 모바일: 세로 스택 + 하단 고정 예약 버튼.
  */
 import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -10,8 +11,10 @@ import { ActivityIndicator, Linking, ScrollView, StyleSheet, View } from 'react-
 import { fetchActivity, type AppActivity } from '@/api/activities';
 import { categoryVisual } from '@/components/categoryVisual';
 import { matchScore } from '@/core';
+import { useBreakpoint } from '@/hooks/useBreakpoint';
+import { track } from '@/lib/analytics';
 import { useTaste } from '@/hooks/useTaste';
-import { colors, radius, spacing } from '@/tokens';
+import { colors, CONTENT_WIDTH, radius, spacing } from '@/tokens';
 import { AppText, Badge, Button, Card, Screen, ScreenHeader } from '@/ui';
 import { formatDuration, formatIntensity, formatPrice, formatRegion } from '@/utils/format';
 import { openKakaoMapSearch } from '@/utils/maps';
@@ -19,6 +22,7 @@ import { openKakaoMapSearch } from '@/utils/maps';
 export default function ActivityDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { taste } = useTaste();
+  const { isDesktop } = useBreakpoint();
   const [activity, setActivity] = useState<AppActivity | null>(null);
   const [loading, setLoading] = useState(true);
   const [booked, setBooked] = useState(false);
@@ -29,7 +33,10 @@ export default function ActivityDetailScreen() {
       setLoading(true);
       try {
         const a = id ? await fetchActivity(id) : null;
-        if (mounted) setActivity(a);
+        if (mounted) {
+          setActivity(a);
+          if (a) track('activity_view', { activityId: a.id });
+        }
       } catch {
         if (mounted) setActivity(null);
       } finally {
@@ -41,9 +48,11 @@ export default function ActivityDetailScreen() {
     };
   }, [id]);
 
+  const maxWidth = isDesktop ? CONTENT_WIDTH.wide : undefined;
+
   if (loading) {
     return (
-      <Screen edges={['top', 'bottom']} noPadding>
+      <Screen edges={['top', 'bottom']} noPadding maxWidth={maxWidth}>
         <ScreenHeader title="활동 상세" />
         <View style={styles.center}>
           <ActivityIndicator color={colors.primary} />
@@ -54,7 +63,7 @@ export default function ActivityDetailScreen() {
 
   if (!activity) {
     return (
-      <Screen edges={['top', 'bottom']} noPadding>
+      <Screen edges={['top', 'bottom']} noPadding maxWidth={maxWidth}>
         <ScreenHeader title="활동 상세" />
         <View style={styles.center}>
           <AppText variant="h2" center>
@@ -75,6 +84,7 @@ export default function ActivityDetailScreen() {
   const mapQuery = `${activity.partnerName ?? activity.title} ${activity.regionSigungu ?? activity.regionSido ?? ''}`.trim();
 
   const onBook = async () => {
+    track('booking_click', { activityId: activity.id, external: Boolean(activity.bookingUrl) });
     if (activity.bookingUrl) {
       try {
         await Linking.openURL(activity.bookingUrl);
@@ -86,85 +96,124 @@ export default function ActivityDetailScreen() {
     setBooked(true);
   };
 
+  const onMap = () => {
+    track('map_open', { activityId: activity.id });
+    void openKakaoMapSearch(mapQuery);
+  };
+
+  const hero = (
+    <View style={[styles.band, isDesktop && styles.bandDesk, { backgroundColor: visual.accent }]}>
+      {activity.imageUrl ? (
+        <Image source={{ uri: activity.imageUrl }} style={styles.image} contentFit="cover" />
+      ) : (
+        <AppText style={styles.emoji}>{visual.emoji}</AppText>
+      )}
+      {score != null && (
+        <View style={styles.badgeOverlay}>
+          <Badge label={`${score}% 잘 맞아요 · 취향 매칭`} tone="mint" />
+        </View>
+      )}
+    </View>
+  );
+
+  const mainInfo = (
+    <>
+      <AppText variant="h1" style={styles.title}>
+        {activity.title}
+      </AppText>
+      {activity.summary != null && (
+        <AppText variant="bodyLg" muted style={styles.summary}>
+          {activity.summary}
+        </AppText>
+      )}
+
+      {activity.keywords.length > 0 && (
+        <View style={styles.chips}>
+          {activity.keywords.map((k) => (
+            <Badge key={k} label={`#${k}`} tone="neutral" size="sm" />
+          ))}
+        </View>
+      )}
+
+      <View style={styles.metaGrid}>
+        <MetaCell label="지역" value={region} />
+        <MetaCell label="소요 시간" value={formatDuration(activity.durationMin)} />
+        <MetaCell label="참가비" value={formatPrice(activity.price)} />
+        <MetaCell label="활동 강도" value={formatIntensity(activity.intensity)} />
+      </View>
+
+      {activity.partnerName != null && (
+        <AppText variant="caption" muted style={styles.partner}>
+          제공 · {activity.partnerName}
+        </AppText>
+      )}
+    </>
+  );
+
+  const mapCard = (
+    <View style={styles.section}>
+      <AppText variant="title">위치</AppText>
+      <Card padding="lg" elevation="soft" style={styles.mapCard}>
+        <AppText style={styles.mapPin}>📍</AppText>
+        <AppText variant="body" weight="semibold" center>
+          {region}
+        </AppText>
+        <Button
+          label="카카오맵에서 보기"
+          variant="secondary"
+          onPress={onMap}
+          style={styles.mapBtn}
+          accessibilityLabel={`${activity.title} 위치를 카카오맵에서 보기`}
+        />
+      </Card>
+    </View>
+  );
+
+  const bookedNote = (
+    <View style={styles.bookedRow}>
+      <AppText variant="bodyLg" weight="semibold" color={colors.success}>
+        ✓ 예약이 완료되었어요
+      </AppText>
+      <Button label="추천으로 돌아가기" variant="secondary" onPress={() => router.replace('/reco')} />
+    </View>
+  );
+
+  if (isDesktop) {
+    return (
+      <Screen edges={['top', 'bottom']} noPadding maxWidth={maxWidth}>
+        <ScreenHeader title="활동 상세" />
+        <ScrollView contentContainerStyle={[styles.content, styles.contentDesk]} showsVerticalScrollIndicator={false}>
+          {hero}
+          <View style={styles.columns}>
+            <View style={styles.mainCol}>{mainInfo}</View>
+            <View style={styles.rail}>
+              <Card padding="lg" style={styles.bookCard}>
+                <AppText variant="caption" muted>
+                  참가비
+                </AppText>
+                <AppText variant="h2">{formatPrice(activity.price)}</AppText>
+                {booked ? bookedNote : <Button label="예약하기" onPress={onBook} />}
+              </Card>
+              {mapCard}
+            </View>
+          </View>
+        </ScrollView>
+      </Screen>
+    );
+  }
+
   return (
     <Screen
       edges={['top', 'bottom']}
       noPadding
-      footer={
-        booked ? (
-          <View style={styles.bookedRow}>
-            <AppText variant="bodyLg" weight="semibold" color={colors.success}>
-              ✓ 예약이 완료되었어요
-            </AppText>
-            <Button label="추천으로 돌아가기" variant="secondary" onPress={() => router.replace('/reco')} />
-          </View>
-        ) : (
-          <Button label="예약하기" onPress={onBook} />
-        )
-      }
+      footer={booked ? bookedNote : <Button label="예약하기" onPress={onBook} />}
     >
       <ScreenHeader title="활동 상세" />
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <View style={[styles.band, { backgroundColor: visual.accent }]}>
-          {activity.imageUrl ? (
-            <Image source={{ uri: activity.imageUrl }} style={styles.image} contentFit="cover" />
-          ) : (
-            <AppText style={styles.emoji}>{visual.emoji}</AppText>
-          )}
-          {score != null && (
-            <View style={styles.badgeOverlay}>
-              <Badge label={`${score}% 잘 맞아요 · 취향 매칭`} tone="mint" />
-            </View>
-          )}
-        </View>
-
+        {hero}
         <View style={styles.body}>
-          <AppText variant="h1" style={styles.title}>
-            {activity.title}
-          </AppText>
-          {activity.summary != null && (
-            <AppText variant="bodyLg" muted style={styles.summary}>
-              {activity.summary}
-            </AppText>
-          )}
-
-          {activity.keywords.length > 0 && (
-            <View style={styles.chips}>
-              {activity.keywords.map((k) => (
-                <Badge key={k} label={`#${k}`} tone="neutral" size="sm" />
-              ))}
-            </View>
-          )}
-
-          <View style={styles.metaGrid}>
-            <MetaCell label="지역" value={region} />
-            <MetaCell label="소요 시간" value={formatDuration(activity.durationMin)} />
-            <MetaCell label="참가비" value={formatPrice(activity.price)} />
-            <MetaCell label="활동 강도" value={formatIntensity(activity.intensity)} />
-          </View>
-
-          <View style={styles.section}>
-            <AppText variant="title">위치</AppText>
-            <Card padding="lg" elevation="soft" style={styles.mapCard}>
-              <AppText style={styles.mapPin}>📍</AppText>
-              <AppText variant="body" weight="semibold" center>
-                {region}
-              </AppText>
-              <Button
-                label="카카오맵에서 보기"
-                variant="secondary"
-                onPress={() => openKakaoMapSearch(mapQuery)}
-                style={styles.mapBtn}
-                accessibilityLabel={`${activity.title} 위치를 카카오맵에서 보기`}
-              />
-            </Card>
-          </View>
-
-          {activity.partnerName != null && (
-            <AppText variant="caption" muted style={styles.partner}>
-              제공 · {activity.partnerName}
-            </AppText>
-          )}
+          {mainInfo}
+          {mapCard}
         </View>
       </ScrollView>
     </Screen>
@@ -198,10 +247,20 @@ const styles = StyleSheet.create({
   content: {
     paddingBottom: spacing.xxl,
   },
+  contentDesk: {
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.sm,
+    gap: spacing.xl,
+  },
   band: {
     height: 200,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  bandDesk: {
+    height: 300,
+    borderRadius: radius.xl,
+    overflow: 'hidden',
   },
   image: {
     width: '100%',
@@ -215,6 +274,22 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: spacing.base,
     left: spacing.base,
+  },
+  columns: {
+    flexDirection: 'row',
+    gap: spacing.xl,
+    alignItems: 'flex-start',
+  },
+  mainCol: {
+    flex: 1,
+    gap: spacing.base,
+  },
+  rail: {
+    width: 300,
+    gap: spacing.xl,
+  },
+  bookCard: {
+    gap: spacing.sm,
   },
   body: {
     paddingHorizontal: spacing.xl,

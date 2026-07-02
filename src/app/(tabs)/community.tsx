@@ -1,6 +1,7 @@
 /**
  * 커뮤니티 탭 — 이웃들의 취미 기록. 필터: 전체/우리 유형/인기/사진.
  * 실제 글(community_posts)을 보여주고, 글이 없으면 샘플로 폴백. 좋아요/글쓰기/내 글 삭제 지원.
+ * 데스크탑: 피드는 읽기 폭(680px) 중앙 컬럼 — 여러 컬럼으로 흩뿌리지 않는다.
  */
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
@@ -8,10 +9,11 @@ import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 
 import type { Post } from '@/api/community';
 import { PostCard } from '@/components/PostCard';
+import { useBreakpoint } from '@/hooks/useBreakpoint';
 import { useCommunity } from '@/hooks/useCommunity';
 import { useTaste } from '@/hooks/useTaste';
 import { useAuth } from '@/providers/AuthProvider';
-import { colors, MIN_TOUCH_SIZE, radius, spacing } from '@/tokens';
+import { colors, CONTENT_WIDTH, MIN_TOUCH_SIZE, radius, spacing } from '@/tokens';
 import { AppText, Button, Screen } from '@/ui';
 
 type FilterKey = 'all' | 'mine' | 'popular' | 'photo';
@@ -29,6 +31,7 @@ export default function CommunityScreen() {
   const myType = taste?.mainType ?? null;
   const myId = session?.user.id ?? null;
   const { posts, loading, isLiked, likeCountOf, toggleLike, removePost } = useCommunity();
+  const { isDesktop } = useBreakpoint();
   const [filter, setFilter] = useState<FilterKey>('all');
 
   const filtered = useMemo(() => {
@@ -49,7 +52,12 @@ export default function CommunityScreen() {
   const showMineEmpty = filter === 'mine' && !myType;
 
   return (
-    <Screen edges={['top']} scroll contentStyle={styles.content}>
+    <Screen
+      edges={['top']}
+      scroll
+      maxWidth={isDesktop ? CONTENT_WIDTH.reading : undefined}
+      contentStyle={styles.content}
+    >
       <View style={styles.header}>
         <AppText variant="h2">커뮤니티</AppText>
         <Button label="글쓰기" size="md" fullWidth={false} onPress={onWrite} />
@@ -137,7 +145,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   chipActive: {
-    backgroundColor: colors.primary,
+    // primaryPressed: 흰 라벨과 WCAG AA(4.7:1) — primary는 3.2:1로 미달
+    backgroundColor: colors.primaryPressed,
   },
   chipInactive: {
     backgroundColor: colors.surfaceInset,

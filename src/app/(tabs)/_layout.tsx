@@ -1,10 +1,14 @@
 /**
- * 하단 탭 내비게이션 — 홈 · 추천 · 커뮤니티 · 마이.
+ * 탭 내비게이션 — 홈 · 추천 · 커뮤니티 · 마이.
+ * 모바일(기본): 하단 탭바. 데스크탑 웹(≥1024px): 좌측 사이드바 + 탭바 숨김.
+ * 같은 <Tabs> 내비게이터를 유지한 채 크롬만 바꿔서 리사이즈해도 화면 상태가 보존된다.
  * 아이콘은 이모지(에셋 없이). 시니어를 위해 라벨/터치 영역을 넉넉히.
  */
 import { Tabs } from 'expo-router';
-import { Platform, StyleSheet } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
 
+import { Sidebar } from '@/components/Sidebar';
+import { useBreakpoint } from '@/hooks/useBreakpoint';
 import { colors, fontFamily } from '@/tokens';
 import { AppText } from '@/ui';
 
@@ -13,41 +17,57 @@ function TabIcon({ emoji, focused }: { emoji: string; focused: boolean }) {
 }
 
 export default function TabsLayout() {
+  const { isDesktop } = useBreakpoint();
+
   return (
-    <Tabs
-      screenOptions={{
-        headerShown: false,
-        tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: colors.textMuted,
-        tabBarStyle: styles.bar,
-        tabBarLabelStyle: styles.label,
-        tabBarItemStyle: styles.item,
-      }}
-    >
-      <Tabs.Screen
-        name="home"
-        options={{ title: '홈', tabBarIcon: ({ focused }) => <TabIcon emoji="🏠" focused={focused} /> }}
-      />
-      <Tabs.Screen
-        name="reco"
-        options={{ title: '추천', tabBarIcon: ({ focused }) => <TabIcon emoji="✨" focused={focused} /> }}
-      />
-      <Tabs.Screen
-        name="community"
-        options={{
-          title: '커뮤니티',
-          tabBarIcon: ({ focused }) => <TabIcon emoji="💬" focused={focused} />,
-        }}
-      />
-      <Tabs.Screen
-        name="my"
-        options={{ title: '마이', tabBarIcon: ({ focused }) => <TabIcon emoji="🙂" focused={focused} /> }}
-      />
-    </Tabs>
+    <View style={styles.row}>
+      {isDesktop && <Sidebar />}
+      <View style={styles.content}>
+        <Tabs
+          tabBar={isDesktop ? () => null : undefined}
+          screenOptions={{
+            headerShown: false,
+            tabBarActiveTintColor: colors.primary,
+            tabBarInactiveTintColor: colors.textMuted,
+            tabBarStyle: styles.bar,
+            tabBarLabelStyle: styles.label,
+            tabBarItemStyle: styles.item,
+          }}
+        >
+          <Tabs.Screen
+            name="home"
+            options={{ title: '홈', tabBarIcon: ({ focused }) => <TabIcon emoji="🏠" focused={focused} /> }}
+          />
+          <Tabs.Screen
+            name="reco"
+            options={{ title: '추천', tabBarIcon: ({ focused }) => <TabIcon emoji="✨" focused={focused} /> }}
+          />
+          <Tabs.Screen
+            name="community"
+            options={{
+              title: '커뮤니티',
+              tabBarIcon: ({ focused }) => <TabIcon emoji="💬" focused={focused} />,
+            }}
+          />
+          <Tabs.Screen
+            name="my"
+            options={{ title: '마이', tabBarIcon: ({ focused }) => <TabIcon emoji="🙂" focused={focused} /> }}
+          />
+        </Tabs>
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  row: {
+    flex: 1,
+    flexDirection: 'row',
+    backgroundColor: colors.background,
+  },
+  content: {
+    flex: 1,
+  },
   bar: {
     backgroundColor: colors.surface,
     borderTopColor: colors.border,

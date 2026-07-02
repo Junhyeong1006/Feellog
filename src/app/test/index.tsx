@@ -1,13 +1,16 @@
 /**
  * 성향 테스트 인트로 — 무엇을, 얼마나, 어떻게 하는지 안내 후 [시작하기].
  * 게스트도 체험 가능(결과 저장은 로그인 후).
+ * 데스크탑: 안내 카드 3장을 한 줄로, 시작 버튼은 중앙 인라인.
  */
 import { router } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 
 import { QUESTIONS } from '@/core';
+import { useBreakpoint } from '@/hooks/useBreakpoint';
+import { track } from '@/lib/analytics';
 import { useAuth } from '@/providers/AuthProvider';
-import { colors, radius, spacing } from '@/tokens';
+import { colors, CONTENT_WIDTH, radius, spacing } from '@/tokens';
 import { AppText, Button, Card, Screen } from '@/ui';
 
 const POINTS = [
@@ -18,12 +21,19 @@ const POINTS = [
 
 export default function TestIntroScreen() {
   const { session, guest } = useAuth();
+  const { isDesktop } = useBreakpoint();
+
+  const onStart = () => {
+    track('test_start');
+    router.push('/test/run');
+  };
 
   return (
     <Screen
       scroll
+      maxWidth={isDesktop ? CONTENT_WIDTH.wide : undefined}
       contentStyle={styles.content}
-      footer={<Button label="시작하기" onPress={() => router.push('/test/run')} />}
+      footer={isDesktop ? undefined : <Button label="시작하기" onPress={onStart} />}
     >
       <View style={styles.hero}>
         <View style={styles.badge}>
@@ -37,19 +47,30 @@ export default function TestIntroScreen() {
         </AppText>
       </View>
 
-      <View style={styles.points}>
+      <View style={[styles.points, isDesktop && styles.pointsRow]}>
         {POINTS.map((p) => (
-          <Card key={p.title} padding="lg" elevation="soft" style={styles.pointCard}>
+          <Card
+            key={p.title}
+            padding="lg"
+            elevation="soft"
+            style={isDesktop ? styles.pointCardDesk : styles.pointCard}
+          >
             <AppText style={styles.pointEmoji}>{p.emoji}</AppText>
-            <View style={styles.pointText}>
-              <AppText variant="title">{p.title}</AppText>
-              <AppText variant="body" muted style={styles.pointBody}>
+            <View style={isDesktop ? styles.pointTextDesk : styles.pointText}>
+              <AppText variant="title" center={isDesktop}>
+                {p.title}
+              </AppText>
+              <AppText variant="body" muted center={isDesktop} style={styles.pointBody}>
                 {p.body}
               </AppText>
             </View>
           </Card>
         ))}
       </View>
+
+      {isDesktop && (
+        <Button label="시작하기" fullWidth={false} style={styles.deskStart} onPress={onStart} />
+      )}
 
       {!session && guest && (
         <AppText variant="caption" muted center style={styles.guestNote}>
@@ -92,10 +113,28 @@ const styles = StyleSheet.create({
   points: {
     gap: spacing.md,
   },
+  pointsRow: {
+    flexDirection: 'row',
+    gap: spacing.xl,
+    alignItems: 'stretch',
+  },
   pointCard: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.base,
+  },
+  pointCardDesk: {
+    flex: 1,
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  pointTextDesk: {
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  deskStart: {
+    alignSelf: 'center',
+    minWidth: 280,
   },
   pointEmoji: {
     fontSize: 34,
