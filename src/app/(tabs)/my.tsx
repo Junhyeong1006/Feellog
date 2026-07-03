@@ -35,6 +35,8 @@ export default function MyScreen() {
   const name = session ? displayNameOf(profile) : '회원님';
   const type = taste?.mainType ? TYPE_META[taste.mainType] : null;
   const initial = name.charAt(0);
+  /** 게스트는 회원 프로필 헤더('회' 아바타 + 회원님) 대신 로그인 유도 카드를 상단에 */
+  const isGuest = guest && !session;
 
   const onLogout = async () => {
     await signOut();
@@ -71,9 +73,17 @@ export default function MyScreen() {
     </View>
   );
 
-  const guestCard = guest && !session && (
+  const guestCard = isGuest && (
     <Card padding="lg" style={styles.guestCard}>
-      <AppText variant="body" muted center style={styles.guestText}>
+      {type && (
+        <View style={styles.guestType}>
+          <AppText variant="caption" muted>
+            나의 여가 유형
+          </AppText>
+          <AppText variant="h2">{type.label}</AppText>
+        </View>
+      )}
+      <AppText variant="body" muted style={styles.guestText}>
         로그인하면 좋아요한 활동과 성향 결과가 저장돼요.
       </AppText>
       <Button label="로그인하기" onPress={() => router.replace('/login')} />
@@ -180,10 +190,11 @@ export default function MyScreen() {
       <Screen edges={['top']} scroll maxWidth={CONTENT_WIDTH.wide} contentStyle={styles.content}>
         <View style={styles.columns}>
           <View style={styles.leftCol}>
-            <Card padding="xl" elevation="soft">
-              {profileSection}
-            </Card>
-            {guestCard}
+            {isGuest ? (
+              guestCard
+            ) : (
+              <Card padding="xl">{profileSection}</Card>
+            )}
           </View>
           <View style={styles.rightCol}>
             {likedSection}
@@ -198,8 +209,7 @@ export default function MyScreen() {
 
   return (
     <Screen edges={['top']} scroll contentStyle={styles.content}>
-      {profileSection}
-      {guestCard}
+      {isGuest ? guestCard : profileSection}
       {likedSection}
       {fontSection}
       {settingsSection}
@@ -271,6 +281,10 @@ const styles = StyleSheet.create({
   },
   guestCard: {
     gap: spacing.md,
+  },
+  guestType: {
+    gap: 2,
+    marginBottom: spacing.xs,
   },
   guestText: {
     lineHeight: 26,

@@ -2,7 +2,7 @@
  * 탭 내비게이션 — 홈 · 추천 · 커뮤니티 · 마이.
  * 모바일(기본): 하단 탭바. 데스크탑 웹(≥1024px): 좌측 사이드바 + 탭바 숨김.
  * 같은 <Tabs> 내비게이터를 유지한 채 크롬만 바꿔서 리사이즈해도 화면 상태가 보존된다.
- * 아이콘은 이모지(에셋 없이). 시니어를 위해 라벨/터치 영역을 넉넉히.
+ * 시니어를 위해 라벨/터치 영역을 넉넉히.
  *
  * 게이트: 부팅 디사이더(index)만으로는 딥링크(/home 직접 진입)를 못 막으므로
  * 여기서도 로그인/게스트·필수 동의를 검사한다(정적 export는 모든 라우트가 직접 진입 가능).
@@ -35,7 +35,7 @@ export default function TabsLayout() {
   const { loading, session, profile, profileLoading, isAuthedOrGuest } = useAuth();
   const { scale } = useFontScale();
   // '앱 전체 글씨' 약속 이행 — 탭 라벨도 스케일(내비 폭 보호를 위해 1.3배 캡)
-  const labelSize = Math.round(15 * Math.min(scale, 1.3));
+  const labelSize = Math.round(16 * Math.min(scale, 1.3));
 
   // 인증 상태 파악 전에는 판단 보류(깜빡임/오리다이렉트 방지)
   if (loading || (session && profileLoading)) {
@@ -56,7 +56,6 @@ export default function TabsLayout() {
           tabBar={isDesktop ? () => null : undefined}
           screenOptions={{
             headerShown: false,
-            // 활성 라벨은 잉크 블루(작은 글자에서 원색 blue500은 AA 미달)
             tabBarActiveTintColor: colors.primaryInk,
             tabBarInactiveTintColor: colors.textSecondary,
             tabBarStyle: styles.bar,
@@ -125,7 +124,7 @@ const styles = StyleSheet.create({
   },
   label: {
     fontFamily: fontFamily.base,
-    // fontSize는 위에서 폰트스케일 반영(기본 15 — 캡션 하한 준수)
+    // fontSize는 위에서 폰트스케일 반영(기본 16 — 캡션 하한 준수)
     fontWeight: '600',
     marginBottom: Platform.OS === 'web' ? 6 : 2,
   },

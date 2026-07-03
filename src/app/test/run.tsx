@@ -5,6 +5,7 @@
  * 데스크탑: 두 장면을 좌우 나란히 비교(기획 의도 그대로).
  * 중도 이탈 대비: 응답을 로컬에 저장하고, 재진입 시 이어서 진행(S2 DoD).
  */
+import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
@@ -17,7 +18,7 @@ import { track } from '@/lib/analytics';
 import { useAuth } from '@/providers/AuthProvider';
 import { clearTestProgress, getTestProgress, setTestProgress } from '@/state/testProgress';
 import { setLocalTaste } from '@/state/tasteCache';
-import { colors, CONTENT_WIDTH, palette, radius, shadows, spacing } from '@/tokens';
+import { colors, CONTENT_WIDTH, radius, shadows, spacing } from '@/tokens';
 import { AppText, ProgressBar, Screen, ScreenHeader } from '@/ui';
 
 const TOTAL = QUESTIONS.length;
@@ -141,12 +142,13 @@ export default function TestRunScreen() {
         </AppText>
 
         <View style={[styles.options, isDesktop && styles.optionsRow]}>
+          {/* 두 선택지는 대등 — 색으로 한쪽에 기울지 않게 중립 밴드 + 잉크 라벨 */}
           <OptionCard
             poleLabel={question.leftAxisLabel}
             title={question.left.title}
             desc={question.left.desc}
-            accent={colors.primaryTint}
-            poleColor={colors.primaryInk}
+            accent={colors.surfaceAlt}
+            poleColor={colors.textPrimary}
             selected={selected === -2}
             wide={isDesktop}
             onPress={() => select(-2)}
@@ -155,8 +157,8 @@ export default function TestRunScreen() {
             poleLabel={question.rightAxisLabel}
             title={question.right.title}
             desc={question.right.desc}
-            accent={palette.mint}
-            poleColor={palette.mintDeep}
+            accent={colors.surfaceAlt}
+            poleColor={colors.textPrimary}
             selected={selected === 2}
             wide={isDesktop}
             onPress={() => select(2)}
@@ -196,6 +198,7 @@ function OptionCard({ poleLabel, title, desc, accent, poleColor, selected, wide,
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={`${title}. ${desc}`}
+      accessibilityState={{ selected }}
       style={({ pressed }) => [
         styles.card,
         wide && styles.cardWide,
@@ -203,12 +206,19 @@ function OptionCard({ poleLabel, title, desc, accent, poleColor, selected, wide,
         pressed && styles.cardPressed,
       ]}
     >
-      <View style={[styles.band, wide && styles.bandWide, { backgroundColor: accent }]}>
-        <AppText variant="title" weight="bold" color={poleColor}>
-          {poleLabel}
-        </AppText>
-      </View>
       <View style={styles.cardBody}>
+        <View style={styles.poleRow}>
+          <View style={[styles.poleChip, { backgroundColor: accent }, selected && styles.poleChipSelected]}>
+            <AppText variant="caption" weight="bold" color={selected ? colors.primary : poleColor}>
+              {poleLabel}
+            </AppText>
+          </View>
+          {selected && (
+            <View style={styles.checkCircle}>
+              <Ionicons name="checkmark" size={18} color={colors.onPrimary} />
+            </View>
+          )}
+        </View>
         <AppText variant="title">{title}</AppText>
         <AppText variant="body" muted style={styles.cardDesc}>
           {desc}
@@ -257,30 +267,47 @@ const styles = StyleSheet.create({
     borderRadius: radius.xl,
     overflow: 'hidden',
     borderWidth: 2,
-    borderColor: 'transparent',
-    ...shadows.card,
+    borderColor: colors.border,
+    ...shadows.soft,
   },
   cardWide: {
     flex: 1,
   },
-  bandWide: {
-    height: 120,
-  },
   cardSelected: {
     borderColor: colors.primary,
+    backgroundColor: colors.primaryTint,
   },
   cardPressed: {
     opacity: 0.95,
     transform: [{ scale: 0.99 }],
   },
-  band: {
-    height: 84,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   cardBody: {
     padding: spacing.lg,
     gap: spacing.xs,
+  },
+  poleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: spacing.sm,
+  },
+  poleChip: {
+    minHeight: 32,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  poleChipSelected: {
+    backgroundColor: colors.surface,
+  },
+  checkCircle: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   cardDesc: {
     lineHeight: 26,

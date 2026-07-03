@@ -1,27 +1,29 @@
 /**
- * 성향 테스트 인트로 — 무엇을, 얼마나, 어떻게 하는지 안내 후 [시작하기].
+ * 성향 테스트 인트로 (v5) — 사진 히어로 + 흰 시트 안내 + [시작하기].
  * 게스트도 체험 가능(결과 저장은 로그인 후).
- * 데스크탑: 안내 카드 3장을 한 줄로, 시작 버튼은 중앙 인라인.
+ * 데스크탑: [안내 컬럼 | 사진] 2컬럼.
  */
+import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { Ionicons } from '@expo/vector-icons';
-
-import { BrandMark } from '@/components/BrandMark';
+import { HERO_PHOTOS } from '@/components/categoryPhoto';
 import { QUESTIONS } from '@/core';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
 import { track } from '@/lib/analytics';
 import { useAuth } from '@/providers/AuthProvider';
 import { answeredCount, clearTestProgress, getTestProgress } from '@/state/testProgress';
-import { colors, CONTENT_WIDTH, palette, spacing } from '@/tokens';
-import { AppText, Button, Card, Screen } from '@/ui';
+import { colors, CONTENT_WIDTH, photoOverlay, radius, spacing } from '@/tokens';
+import { AppText, Badge, Button, Screen } from '@/ui';
 
+// 실제 문항은 텍스트 2택 — '장면 비교'처럼 이미지를 약속하는 카피 금지(적대적 리뷰)
 const POINTS = [
-  { icon: 'images-outline', tint: palette.blueTint, ink: colors.primaryInk, title: '두 장면 중 끌리는 쪽', body: `${QUESTIONS.length}개의 장면을 비교하며 골라요` },
-  { icon: 'time-outline', tint: palette.mint, ink: colors.mintInk, title: '약 2분이면 충분해요', body: '천천히 편하게 고르셔도 괜찮아요' },
-  { icon: 'flag-outline', tint: palette.coralTint, ink: colors.coralInk, title: '나의 여가 유형', body: '유형과 어울리는 활동을 추천해드려요' },
+  { icon: 'checkmark-circle-outline', title: '둘 중 더 끌리는 쪽', body: `${QUESTIONS.length}개의 질문에 답하며 알아가요` },
+  { icon: 'time-outline', title: '약 2분이면 충분해요', body: '천천히 편하게 고르셔도 괜찮아요' },
+  { icon: 'flag-outline', title: '나의 여가 유형', body: '유형과 어울리는 활동을 추천해드려요' },
 ] as const;
 
 export default function TestIntroScreen() {
@@ -64,108 +66,132 @@ export default function TestIntroScreen() {
       <Button label="시작하기" onPress={onStart} />
     );
 
+  const guide = (
+    <View style={styles.points}>
+      {POINTS.map((p) => (
+        <View key={p.title} style={styles.pointRow}>
+          <View style={styles.pointIcon}>
+            <Ionicons name={p.icon} size={22} color={colors.primary} />
+          </View>
+          <View style={styles.pointText}>
+            <AppText variant="title">{p.title}</AppText>
+            <AppText variant="body" muted style={styles.pointBody}>
+              {p.body}
+            </AppText>
+          </View>
+        </View>
+      ))}
+    </View>
+  );
+
+  if (isDesktop) {
+    return (
+      <Screen scroll maxWidth={CONTENT_WIDTH.wide} contentStyle={styles.deskContent}>
+        <View style={styles.deskColumns}>
+          <View style={styles.deskLeft}>
+            <Badge label={`약 2분 · ${QUESTIONS.length}문항`} tone="primary" />
+            <AppText variant="display" style={styles.deskTitle}>
+              나의 여가 성향{'\n'}알아보기
+            </AppText>
+            <AppText variant="bodyLg" muted style={styles.deskLead}>
+              더 끌리는 쪽을 고르다 보면 나에게 맞는 취미가 보여요
+            </AppText>
+            {guide}
+            <View style={styles.deskStartCol}>{startButtons}</View>
+            {!session && guest && (
+              <AppText variant="caption" muted>
+                지금은 둘러보기 상태예요. 로그인하면 결과가 저장돼요.
+              </AppText>
+            )}
+          </View>
+          <View style={styles.deskPhoto}>
+            <Image source={HERO_PHOTOS.test} style={StyleSheet.absoluteFill} contentFit="cover" />
+          </View>
+        </View>
+      </Screen>
+    );
+  }
+
   return (
     <Screen
+      edges={['bottom']}
+      noPadding
       scroll
-      maxWidth={isDesktop ? CONTENT_WIDTH.wide : undefined}
-      contentStyle={styles.content}
-      footer={isDesktop ? undefined : <View style={styles.footerCol}>{startButtons}</View>}
+      footer={<View style={styles.footerCol}>{startButtons}</View>}
     >
+      {/* 사진 히어로 */}
       <View style={styles.hero}>
-        <BrandMark size={72} />
-        <AppText variant="h1" center style={styles.title}>
-          나의 여가 성향{'\n'}알아보기
-        </AppText>
-        <AppText variant="bodyLg" muted center style={styles.subtitle}>
-          더 끌리는 쪽을 고르다 보면{'\n'}나에게 맞는 취미가 보여요
-        </AppText>
+        <Image source={HERO_PHOTOS.test} style={StyleSheet.absoluteFill} contentFit="cover" />
+        <LinearGradient colors={photoOverlay.bottom} locations={[0.3, 0.6, 1]} style={StyleSheet.absoluteFill} />
+        <View style={styles.heroCopy}>
+          <View style={styles.heroChip}>
+            <AppText variant="caption" weight="bold" color={colors.onPhoto}>
+              약 2분 · {QUESTIONS.length}문항
+            </AppText>
+          </View>
+          <AppText variant="h1" color={colors.onPhoto}>
+            나의 여가 성향 알아보기
+          </AppText>
+        </View>
       </View>
 
-      <View style={[styles.points, isDesktop && styles.pointsRow]}>
-        {POINTS.map((p) => (
-          <Card
-            key={p.title}
-            padding="lg"
-            elevation="soft"
-            style={isDesktop ? styles.pointCardDesk : styles.pointCard}
-          >
-            <View style={[styles.pointIcon, { backgroundColor: p.tint }]}>
-              <Ionicons name={p.icon} size={22} color={p.ink} />
-            </View>
-            <View style={isDesktop ? styles.pointTextDesk : styles.pointText}>
-              <AppText variant="title" center={isDesktop}>
-                {p.title}
-              </AppText>
-              <AppText variant="body" muted center={isDesktop} style={styles.pointBody}>
-                {p.body}
-              </AppText>
-            </View>
-          </Card>
-        ))}
-      </View>
-
-      {isDesktop && <View style={styles.deskStartCol}>{startButtons}</View>}
-
-      {!session && guest && (
-        <AppText variant="caption" muted center style={styles.guestNote}>
-          지금은 둘러보기 상태예요. 로그인하면 결과가 저장돼요.
+      {/* 안내 시트 */}
+      <View style={styles.sheet}>
+        <AppText variant="body" muted style={styles.lead}>
+          더 끌리는 쪽을 고르다 보면 나에게 맞는 취미가 보여요
         </AppText>
-      )}
+        {guide}
+        {!session && guest && (
+          <AppText variant="caption" muted style={styles.guestNote}>
+            지금은 둘러보기 상태예요. 로그인하면 결과가 저장돼요.
+          </AppText>
+        )}
+      </View>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  content: {
+  hero: {
+    height: 300,
+    justifyContent: 'flex-end',
+  },
+  heroCopy: {
+    padding: spacing.xl,
+    gap: spacing.md,
+  },
+  heroChip: {
+    alignSelf: 'flex-start',
+    minHeight: 34,
+    paddingHorizontal: spacing.base,
+    borderRadius: radius.pill,
+    // 흰 반투명 칩은 밝은 사진에서 AA 미달 — 다크 글래스 + 흰 텍스트(접근성 리뷰)
+    backgroundColor: colors.photoChip,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sheet: {
+    paddingHorizontal: spacing.xl,
     paddingTop: spacing.xl,
     paddingBottom: spacing.lg,
-    gap: spacing.xxl,
+    gap: spacing.xl,
   },
-  hero: {
-    alignItems: 'center',
-    gap: spacing.base,
-    paddingTop: spacing.lg,
-  },
-  title: {
-    lineHeight: 42,
-  },
-  subtitle: {
+  lead: {
     lineHeight: 28,
   },
   points: {
-    gap: spacing.md,
+    gap: spacing.lg,
   },
-  pointsRow: {
-    flexDirection: 'row',
-    gap: spacing.xl,
-    alignItems: 'stretch',
-  },
-  pointCard: {
+  pointRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.base,
   },
-  pointCardDesk: {
-    flex: 1,
-    alignItems: 'center',
-    gap: spacing.md,
-  },
-  pointTextDesk: {
-    alignItems: 'center',
-    gap: spacing.xs,
-  },
-  deskStartCol: {
-    alignSelf: 'center',
-    minWidth: 320,
-    gap: spacing.xs,
-  },
-  footerCol: {
-    gap: spacing.xs,
-  },
   pointIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 14, // 스쿼클
+    width: 48,
+    height: 48,
+    borderRadius: radius.md,
+    backgroundColor: colors.primaryTint,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -177,6 +203,41 @@ const styles = StyleSheet.create({
     lineHeight: 26,
   },
   guestNote: {
-    paddingHorizontal: spacing.lg,
+    lineHeight: 22,
+  },
+  footerCol: {
+    gap: spacing.xs,
+  },
+  // ── 데스크탑 ──
+  deskContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    paddingVertical: spacing.xxl,
+  },
+  deskColumns: {
+    flexDirection: 'row',
+    gap: spacing.xxl,
+    alignItems: 'stretch',
+  },
+  deskLeft: {
+    flex: 1,
+    gap: spacing.lg,
+    justifyContent: 'center',
+  },
+  deskTitle: {
+    lineHeight: 44,
+  },
+  deskLead: {
+    lineHeight: 30,
+  },
+  deskStartCol: {
+    gap: spacing.xs,
+    maxWidth: 360,
+  },
+  deskPhoto: {
+    flex: 1,
+    minHeight: 460,
+    borderRadius: radius.xl,
+    overflow: 'hidden',
   },
 });

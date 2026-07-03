@@ -105,12 +105,12 @@ export default function ActivityDetailScreen() {
       <CategoryBand
         imageUrl={activity.imageUrl}
         category={activity.category}
-        height={isDesktop ? 300 : 200}
+        height={isDesktop ? 340 : 260}
         glyphSize={40}
       />
       {score != null && (
         <View style={styles.badgeOverlay}>
-          <Badge label={`${score}% 잘 맞아요 · 취향 매칭`} tone="mint" />
+          <Badge label={`${score}% 잘 맞아요 · 취향 매칭`} tone="onPhoto" />
         </View>
       )}
     </View>
@@ -130,7 +130,7 @@ export default function ActivityDetailScreen() {
       {activity.keywords.length > 0 && (
         <View style={styles.chips}>
           {activity.keywords.map((k) => (
-            <Badge key={k} label={`#${k}`} tone="neutral" size="sm" />
+            <Badge key={k} label={k} tone="neutral" size="sm" shape="square" />
           ))}
         </View>
       )}
@@ -171,7 +171,8 @@ export default function ActivityDetailScreen() {
     </View>
   );
 
-  // 예약 CTA: 링크가 있으면 외부 예약, 없으면 준비 중 안내(허위 성공 금지)
+  // 예약 CTA: 링크가 있으면 외부 예약, 없으면 다음 행동(위치 확인)을 버튼으로 제시
+  // — 회색 안내문만 남기는 막다른 길 금지(적대적 리뷰: 시니어 퍼널)
   const bookingAction = activity.bookingUrl ? (
     <View style={styles.bookedRow}>
       <Button label="예약하기" onPress={onBook} />
@@ -182,9 +183,16 @@ export default function ActivityDetailScreen() {
       )}
     </View>
   ) : (
-    <AppText variant="body" muted center style={styles.noBooking}>
-      온라인 예약은 준비 중이에요.{'\n'}위치를 확인하고 방문해 보세요.
-    </AppText>
+    <View style={styles.bookedRow}>
+      <Button
+        label="카카오맵에서 위치 보기"
+        onPress={onMap}
+        accessibilityLabel={`${activity.title} 위치를 카카오맵에서 보기`}
+      />
+      <AppText variant="caption" muted center>
+        온라인 예약은 준비 중이에요. 위치를 확인하고 방문해 보세요.
+      </AppText>
+    </View>
   );
 
   if (isDesktop) {

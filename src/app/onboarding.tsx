@@ -1,9 +1,10 @@
 /**
- * 온보딩 인트로 3장 (프로토타입 카피). 좌우로 넘기거나 [다음]으로 진행.
+ * 온보딩 인트로 3장 (v5: 실사진 슬라이드). 좌우로 넘기거나 [다음]으로 진행.
+ * 각 장 = 풀블리드 사진(위) + 흰 영역 텍스트(아래) — 사진과 텍스트를 분리(오버레이 없음).
  * 마지막 장에서 [시작하기] → onboardingSeen 저장 후 디사이더로 복귀.
- * 일러스트는 소프트 패널 + 이모지 placeholder(추후 실제 에셋으로 교체 쉬움).
- * 데스크탑: 캐러셀 대신 3장을 카드 한 줄로 펼쳐 보여준다(리사이즈 흔들림 없음).
+ * 데스크탑: 캐러셀 대신 3장을 사진 카드 한 줄로 펼쳐 보여준다(리사이즈 흔들림 없음).
  */
+import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
@@ -11,36 +12,37 @@ import {
   ScrollView,
   StyleSheet,
   View,
+  type ImageSourcePropType,
   type LayoutChangeEvent,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
 } from 'react-native';
 
-import { SpotIllustration, type SpotKind } from '@/components/EmptyState';
+import { categoryPhoto, HERO_PHOTOS } from '@/components/categoryPhoto';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
 import { setOnboardingSeen } from '@/state/appFlags';
-import { CONTENT_WIDTH, MAX_CONTENT_WIDTH, spacing } from '@/tokens';
-import { AppText, Button, Card, Dots, Screen } from '@/ui';
+import { colors, CONTENT_WIDTH, MAX_CONTENT_WIDTH, radius, spacing } from '@/tokens';
+import { AppText, Button, Dots, Screen } from '@/ui';
 
 interface Slide {
-  spot: SpotKind;
+  photo: ImageSourcePropType;
   title: string;
   body: string;
 }
 
 const SLIDES: Slide[] = [
   {
-    spot: 'compass',
+    photo: HERO_PHOTOS.walk,
     title: '나에게 맞는 취미,\n찾아드릴게요',
-    body: '12개의 장면으로 성향을 알아보고 딱 맞는 활동을 추천해요',
+    body: '12개의 질문으로 성향을 알아보고 딱 맞는 활동을 추천해요',
   },
   {
-    spot: 'chat',
+    photo: categoryPhoto('전시')!,
     title: '함께 나누는 즐거움,\n취향 공동체',
     body: '같은 취향의 이웃들과 이야기를 나눠보세요',
   },
   {
-    spot: 'heart',
+    photo: categoryPhoto('공예')!,
     title: '좋아요 할수록\n더 잘 맞는 추천',
     body: '마음에 드는 활동에 좋아요를 남기면 추천이 똑똑해져요',
   },
@@ -93,7 +95,7 @@ export default function OnboardingScreen() {
       <Screen scroll maxWidth={CONTENT_WIDTH.dashboard} contentStyle={styles.deskContent}>
         <View style={styles.deskHero}>
           <AppText variant="h1" center>
-            Feellog에 오신 것을 환영해요
+            필로그에 오신 것을 환영해요
           </AppText>
           <AppText variant="bodyLg" muted center style={styles.body}>
             취미를 찾고, 기록하고, 나누는 공간이에요
@@ -102,15 +104,17 @@ export default function OnboardingScreen() {
 
         <View style={styles.deskRow}>
           {SLIDES.map((slide, i) => (
-            <Card key={i} padding="xl" elevation="soft" style={styles.deskCard}>
-              <SpotIllustration kind={slide.spot} size={120} />
-              <AppText variant="title" center style={styles.title}>
-                {slide.title}
-              </AppText>
-              <AppText variant="body" muted center style={styles.body}>
-                {slide.body}
-              </AppText>
-            </Card>
+            <View key={i} style={styles.deskCard}>
+              <Image source={slide.photo} style={styles.deskPhoto} contentFit="cover" />
+              <View style={styles.deskCardBody}>
+                <AppText variant="title" style={styles.title}>
+                  {slide.title}
+                </AppText>
+                <AppText variant="body" muted style={styles.body}>
+                  {slide.body}
+                </AppText>
+              </View>
+            </View>
           ))}
         </View>
 
@@ -162,12 +166,14 @@ export default function OnboardingScreen() {
         >
           {SLIDES.map((slide, i) => (
             <View key={i} style={[styles.slide, { width: pageWidth }]}>
-              <SpotIllustration kind={slide.spot} size={180} />
+              <View style={styles.photoWrap}>
+                <Image source={slide.photo} style={styles.photo} contentFit="cover" transition={150} />
+              </View>
               <View style={styles.copy}>
-                <AppText variant="h2" center style={styles.title}>
+                <AppText variant="h1" style={styles.title}>
                   {slide.title}
                 </AppText>
-                <AppText variant="bodyLg" muted center style={styles.body}>
+                <AppText variant="bodyLg" muted style={styles.body}>
                   {slide.body}
                 </AppText>
               </View>
@@ -197,21 +203,27 @@ const styles = StyleSheet.create({
   },
   slide: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
     paddingHorizontal: spacing.xl,
-    gap: spacing.xxl,
+    paddingTop: spacing.sm,
+    gap: spacing.xl,
+  },
+  photoWrap: {
+    borderRadius: radius.xl,
+    overflow: 'hidden',
+    backgroundColor: colors.surfaceAlt,
+  },
+  photo: {
+    width: '100%',
+    aspectRatio: 4 / 3,
   },
   copy: {
     gap: spacing.md,
-    alignItems: 'center',
   },
   title: {
     lineHeight: 36,
   },
   body: {
-    lineHeight: 28,
-    paddingHorizontal: spacing.sm,
+    lineHeight: 29,
   },
   footer: {
     gap: spacing.lg,
@@ -235,8 +247,19 @@ const styles = StyleSheet.create({
   },
   deskCard: {
     flex: 1,
-    alignItems: 'center',
-    gap: spacing.base,
+    overflow: 'hidden',
+    backgroundColor: colors.surface,
+    borderRadius: radius.xl,
+    borderWidth: 1,
+    borderColor: colors.borderOnWhite,
+  },
+  deskPhoto: {
+    width: '100%',
+    aspectRatio: 3 / 2,
+  },
+  deskCardBody: {
+    padding: spacing.lg,
+    gap: spacing.sm,
   },
   deskStart: {
     alignSelf: 'center',

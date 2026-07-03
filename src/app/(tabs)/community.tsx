@@ -56,6 +56,7 @@ export default function CommunityScreen() {
     <Screen
       edges={['top']}
       scroll
+      background={colors.surfaceAlt}
       maxWidth={isDesktop ? CONTENT_WIDTH.reading : undefined}
       contentStyle={styles.content}
     >

@@ -1,7 +1,7 @@
 /**
- * Chip — 선택형 알약 칩 프리미티브(필터/카테고리/설정 토글 공용).
- * 화면마다 제각각이던 칩 스타일을 하나로 통일한다.
- * 활성: primaryPressed 채움 + 흰 라벨(AA), 비활성: 크림 인셋 + 보조 텍스트.
+ * Chip — 선택형 알약 칩 프리미티브(필터/카테고리/설정 토글 공용, v5).
+ * 활성: 잉크 채움 + 흰 라벨(브랜드색 남용 방지 — 커뮤니티/필터 실서비스 문법),
+ * 비활성: 중립 인셋 + 보조 텍스트.
  */
 import { Pressable, StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
 
@@ -61,11 +61,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.base,
   },
   active: {
-    // primaryPressed: 흰 라벨과 WCAG AA(4.7:1) — primary 원색은 3.2:1로 미달
-    backgroundColor: colors.primaryPressed,
+    // 잉크 채움 + 흰 라벨(15.9:1) — 선택 상태에 브랜드색을 아낀다
+    backgroundColor: colors.textPrimary,
+    borderWidth: 1.5,
+    borderColor: colors.textPrimary,
   },
   inactive: {
-    backgroundColor: colors.surfaceInset,
+    // 흰 배경 + 보더(실서비스 필터 칩 문법 — 흰/미스트 어느 바탕에서도 성립)
+    backgroundColor: colors.surface,
+    borderWidth: 1.5,
+    borderColor: colors.border,
   },
   pressed: {
     opacity: 0.75,

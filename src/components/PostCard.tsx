@@ -1,6 +1,6 @@
 /**
  * PostCard — 커뮤니티 글 카드. 작성자(아바타/유형 배지/시간) + 본문 +
- * (사진글) 카테고리 이모지 밴드 + 좋아요/댓글 수. 좋아요는 부모가 제어.
+ * (사진글) 사진 블록 + 좋아요/댓글 수. 좋아요는 부모가 제어.
  * onDelete가 있으면 본인 글 → 인라인 확인 후 삭제.
  */
 import { Ionicons } from '@expo/vector-icons';
@@ -14,13 +14,13 @@ import { colors, palette, radius, spacing } from '@/tokens';
 import { AppText, Badge, Card } from '@/ui';
 
 import { CategoryBand } from './CategoryBand';
+import { samplePostPhoto } from './categoryPhoto';
 
-/** 아바타 폴백 색: 이름 해시로 결정적 배정(틴트 bg + 잉크 fg) */
+/** 아바타 폴백 색: 이름 해시로 결정적 배정(틴트 bg + 딥 잉크 fg — v5 그린/테라코타/중립) */
 const AVATAR_TONES = [
-  { bg: palette.blueTint, fg: colors.primaryInk },
-  { bg: palette.mint, fg: colors.mintInk },
-  { bg: palette.coralTint, fg: colors.coralInk },
-  { bg: palette.cream2, fg: palette.gray600 },
+  { bg: palette.greenTint, fg: palette.green600 },
+  { bg: palette.terracottaTint, fg: palette.terracotta },
+  { bg: palette.inset, fg: palette.gray600 },
 ] as const;
 
 function avatarTone(name: string) {
@@ -43,6 +43,8 @@ export function PostCard({ post, liked, likeCount, onToggleLike, onDelete, onOpe
   const typeLabel = post.authorType ? TYPE_META[post.authorType].label : null;
   const tone = avatarTone(post.authorName);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  // 샘플 글은 카탈로그와 다른 전용 컷 — 같은 사진이 '유저 사진'으로 재등장하는 가짜 티 방지
+  const sampleCut = post.isSample ? samplePostPhoto(post.id) : null;
 
   return (
     <Card padding="lg" elevation="soft">
@@ -81,7 +83,11 @@ export function PostCard({ post, liked, likeCount, onToggleLike, onDelete, onOpe
 
       {post.hasPhoto && (
         <View style={styles.photo}>
-          <CategoryBand imageUrl={post.imageUrl} category={post.category} height={168} glyphSize={28} />
+          {sampleCut ? (
+            <Image source={sampleCut} style={styles.samplePhoto} contentFit="cover" transition={150} />
+          ) : (
+            <CategoryBand imageUrl={post.imageUrl} category={post.category} height={168} glyphSize={28} />
+          )}
         </View>
       )}
 
@@ -97,9 +103,9 @@ export function PostCard({ post, liked, likeCount, onToggleLike, onDelete, onOpe
           <Ionicons
             name={liked ? 'heart' : 'heart-outline'}
             size={22}
-            color={liked ? colors.coralInk : colors.textSecondary}
+            color={liked ? colors.accent : colors.textSecondary}
           />
-          <AppText variant="body" color={liked ? colors.coralInk : colors.textSecondary} weight="semibold" tabular>
+          <AppText variant="body" color={liked ? colors.accent : colors.textSecondary} weight="semibold" tabular>
             {likeCount}
           </AppText>
         </Pressable>
@@ -202,6 +208,10 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
     overflow: 'hidden',
   },
+  samplePhoto: {
+    width: '100%',
+    height: 168,
+  },
   footer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -212,11 +222,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
-    minHeight: 44,
+    // 웹은 hitSlop이 무시되므로 실제 높이로 48dp 확보
+    minHeight: 48,
+    paddingHorizontal: spacing.xs,
   },
   deleteBtn: {
     marginLeft: 'auto',
-    minHeight: 44,
+    minHeight: 48,
     justifyContent: 'center',
     paddingHorizontal: spacing.sm,
   },
@@ -237,7 +249,7 @@ const styles = StyleSheet.create({
     gap: spacing.lg,
   },
   confirmBtn: {
-    minHeight: 44,
+    minHeight: 48,
     justifyContent: 'center',
     paddingHorizontal: spacing.sm,
   },

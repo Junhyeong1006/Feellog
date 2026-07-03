@@ -1,13 +1,16 @@
 /**
- * 성향 분석 결과 — 유형 히어로 + 레이더(한눈 요약) + 5축 막대(자세히) + 공유(S4).
+ * 성향 분석 결과 (v5) — 유형 대표 사진 히어로(텍스트온포토) + 레이더 + 5축 막대 + 공유.
  * 답변(values)을 쿼리로 받아 순수 함수 diagnose로 재계산(무상태·딥링크 안전) → 그대로 공유 링크가 된다.
  * 데스크탑: 히어로 아래 [레이더 카드 | 막대+보조성향 카드] 2컬럼.
  */
+import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Redirect, router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { AxisChart } from '@/components/AxisChart';
+import { typePhoto } from '@/components/categoryPhoto';
 import { RadarChart } from '@/components/RadarChart';
 import {
   diagnose,
@@ -20,9 +23,9 @@ import {
 import { useBreakpoint } from '@/hooks/useBreakpoint';
 import { track } from '@/lib/analytics';
 import { useAuth } from '@/providers/AuthProvider';
-import { colors, CONTENT_WIDTH, MAX_CONTENT_WIDTH, spacing } from '@/tokens';
+import { colors, CONTENT_WIDTH, MAX_CONTENT_WIDTH, photoOverlay, radius, spacing } from '@/tokens';
 import { absoluteUrl, shareContent } from '@/utils/share';
-import { AppText, Badge, Button, Card, Screen } from '@/ui';
+import { AppText, Button, Card, Screen } from '@/ui';
 
 function toAnswerValue(n: number): AnswerValue {
   if (Number.isNaN(n)) return 0;
@@ -56,13 +59,36 @@ export default function ResultScreen() {
     track('result_share');
     const outcome = await shareContent({
       title: `나는 ${type.label}!`,
-      message: `Feellog 성향 테스트 결과, 나는 "${type.label}"이에요. 당신의 여가 유형도 알아보세요!`,
+      message: `필로그 성향 테스트 결과, 나는 "${type.label}"이에요. 당신의 여가 유형도 알아보세요!`,
       url: absoluteUrl(`/result?v=${raw}`),
     });
     if (outcome === 'copied') setShareNote('링크를 복사했어요. 원하는 곳에 붙여넣어 공유해 보세요!');
     else if (outcome === 'failed') setShareNote('이 환경에서는 공유하기가 지원되지 않아요.');
     else setShareNote(null); // shared/dismissed(시트 닫음)는 안내 불필요
   };
+
+  // 유형 대표 사진 히어로(텍스트온포토)
+  const hero = (
+    <View style={[styles.hero, isDesktop && styles.heroDesk]}>
+      <Image source={typePhoto(result.mainType)} style={StyleSheet.absoluteFill} contentFit="cover" transition={200} />
+      <LinearGradient colors={photoOverlay.bottom} locations={[0.25, 0.55, 1]} style={StyleSheet.absoluteFill} />
+      <View style={styles.heroCopy}>
+        <AppText variant="caption" weight="bold" color={colors.onPhotoSoft}>
+          나의 여가 유형
+        </AppText>
+        <AppText variant="display" color={colors.onPhoto} style={styles.typeName}>
+          {type.label}
+        </AppText>
+        {sub && (
+          <View style={styles.subChip}>
+            <AppText variant="caption" weight="bold" color={colors.onPhoto}>
+              보조 성향 · {sub.label}
+            </AppText>
+          </View>
+        )}
+      </View>
+    </View>
+  );
 
   const radarCard = (
     <Card padding="lg" style={styles.chartCard}>
@@ -81,7 +107,7 @@ export default function ResultScreen() {
       </Card>
 
       {sub && (
-        <Card padding="lg" elevation="soft">
+        <Card padding="lg">
           <AppText variant="title">{sub.label}</AppText>
           <AppText variant="body" muted style={styles.subBody}>
             {sub.tagline}
@@ -100,6 +126,8 @@ export default function ResultScreen() {
   return (
     <Screen
       scroll
+      noPadding
+      edges={isDesktop ? undefined : ['bottom']}
       maxWidth={isDesktop ? CONTENT_WIDTH.wide : undefined}
       contentStyle={styles.content}
       footer={
@@ -112,83 +140,100 @@ export default function ResultScreen() {
         )
       }
     >
-      <View style={styles.hero}>
-        <AppText variant="body" muted>
-          나의 여가 유형
-        </AppText>
-        <AppText variant="h1" center style={styles.typeName}>
-          {type.label}
-        </AppText>
-        {sub && <Badge label={`보조 성향 · ${sub.label}`} tone="mint" />}
-        <AppText variant="bodyLg" muted center style={styles.tagline}>
+      {hero}
+
+      <View style={styles.body}>
+        <AppText variant="bodyLg" style={styles.tagline}>
           {type.tagline}
         </AppText>
+
+        {isDesktop ? (
+          <View style={styles.columns}>
+            <View style={styles.col}>{radarCard}</View>
+            <View style={styles.col}>{detailCards}</View>
+          </View>
+        ) : (
+          <View style={styles.stack}>
+            {radarCard}
+            {detailCards}
+          </View>
+        )}
+
+        {shareNote && (
+          <AppText variant="caption" center color={colors.primaryInk} style={styles.shareNote}>
+            {shareNote}
+          </AppText>
+        )}
+        {guestNote}
+
+        {isDesktop && (
+          <View style={styles.deskActions}>
+            <Button
+              label="활동 추천 받기"
+              fullWidth={false}
+              style={styles.deskAction}
+              onPress={() => router.replace('/reco')}
+            />
+            <Button
+              label="결과 공유하기"
+              variant="outline"
+              fullWidth={false}
+              style={styles.deskAction}
+              onPress={onShare}
+            />
+            <Button
+              label="다시 검사하기"
+              variant="ghost"
+              fullWidth={false}
+              style={styles.deskAction}
+              onPress={() => router.replace('/test/run')}
+            />
+          </View>
+        )}
       </View>
-
-      {isDesktop ? (
-        <View style={styles.columns}>
-          <View style={styles.col}>{radarCard}</View>
-          <View style={styles.col}>{detailCards}</View>
-        </View>
-      ) : (
-        <>
-          {radarCard}
-          {detailCards}
-        </>
-      )}
-
-      {shareNote && (
-        <AppText variant="caption" center color={colors.primaryInk} style={styles.shareNote}>
-          {shareNote}
-        </AppText>
-      )}
-      {guestNote}
-
-      {isDesktop && (
-        <View style={styles.deskActions}>
-          <Button
-            label="활동 추천 받기"
-            fullWidth={false}
-            style={styles.deskAction}
-            onPress={() => router.replace('/reco')}
-          />
-          <Button
-            label="결과 공유하기"
-            variant="outline"
-            fullWidth={false}
-            style={styles.deskAction}
-            onPress={onShare}
-          />
-          <Button
-            label="다시 검사하기"
-            variant="ghost"
-            fullWidth={false}
-            style={styles.deskAction}
-            onPress={() => router.replace('/test/run')}
-          />
-        </View>
-      )}
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
   content: {
-    paddingTop: spacing.xl,
     paddingBottom: spacing.xl,
-    gap: spacing.xl,
   },
   hero: {
-    alignItems: 'center',
-    gap: spacing.md,
-    paddingVertical: spacing.lg,
+    height: 320,
+    justifyContent: 'flex-end',
+  },
+  heroDesk: {
+    height: 380,
+    borderRadius: radius.xl,
+    overflow: 'hidden',
+    marginTop: spacing.lg,
+  },
+  heroCopy: {
+    padding: spacing.xl,
+    gap: spacing.sm,
+    alignItems: 'flex-start',
   },
   typeName: {
-    lineHeight: 40,
+    marginTop: 2,
+  },
+  subChip: {
+    minHeight: 34,
+    paddingHorizontal: spacing.base,
+    borderRadius: radius.pill,
+    // 흰 반투명 칩은 밝은 사진에서 AA 미달 — 다크 글래스 + 흰 텍스트(접근성 리뷰)
+    backgroundColor: colors.photoChip,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: spacing.xs,
+  },
+  body: {
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.lg,
+    gap: spacing.xl,
   },
   tagline: {
-    lineHeight: 28,
-    paddingHorizontal: spacing.sm,
+    lineHeight: 31,
   },
   columns: {
     flexDirection: 'row',
@@ -198,8 +243,11 @@ const styles = StyleSheet.create({
   col: {
     flex: 1,
   },
+  stack: {
+    gap: spacing.lg,
+  },
   detailCol: {
-    gap: spacing.xl,
+    gap: spacing.lg,
   },
   chartCard: {
     gap: spacing.lg,

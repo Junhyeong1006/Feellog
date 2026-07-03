@@ -5,7 +5,21 @@ import { type PropsWithChildren } from 'react';
  * 웹 전용 HTML 셸 (Expo Router). 네이티브에는 영향 없음.
  * - lang="ko", PWA manifest, theme-color 연결.
  * - viewport에 maximum-scale을 두지 않아 시니어 핀치 줌(확대)을 허용한다(접근성).
+ * - Pretendard Variable 셀프호스팅(다이내믹 서브셋 — 화면에 쓰인 유니코드 구간만 로드,
+ *   첫 화면 기준 200~350KB). 외부 폰트 CDN 의존 없음.
  */
+
+const BASE_CSS = `
+html, body {
+  background-color: #FFFFFF;
+  font-family: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont,
+    'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  word-break: keep-all; /* 한글 어절 단위 줄바꿈 — 시니어 가독성 */
+}
+`;
+
 export default function Root({ children }: PropsWithChildren) {
   return (
     <html lang="ko">
@@ -13,7 +27,7 @@ export default function Root({ children }: PropsWithChildren) {
         <meta charSet="utf-8" />
         <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-        <meta name="theme-color" content="#5B8DEF" />
+        <meta name="theme-color" content="#1E6B4F" />
         <link rel="manifest" href="/manifest.json" />
 
         {/* 검색/공유 미리보기(OG) — 결과 공유 링크가 예쁘게 펼쳐지도록.
@@ -35,18 +49,9 @@ export default function Root({ children }: PropsWithChildren) {
         <meta property="og:image:width" content="512" />
         <meta property="og:image:height" content="512" />
 
-        {/* 본문 Pretendard + 로고 Baloo 2 (웹 CDN). 네이티브는 시스템 폰트로 폴백. */}
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link
-          rel="stylesheet"
-          href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@1.3.9/dist/web/static/pretendard.min.css"
-        />
-        <link
-          rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700&display=swap"
-        />
-        {/* 크림 "종이" 배경을 첫 페인트부터 적용(깜빡임 방지) */}
-        <style dangerouslySetInnerHTML={{ __html: 'html,body{background-color:#FAF8F3;}' }} />
+        {/* Pretendard Variable 셀프호스팅(public/fonts) — CSS 내부 상대경로가 서브셋 woff2를 참조 */}
+        <link rel="stylesheet" href="/fonts/pretendard/pretendardvariable-dynamic-subset.css" />
+        <style dangerouslySetInnerHTML={{ __html: BASE_CSS }} />
         <ScrollViewStyleReset />
       </head>
       <body>{children}</body>

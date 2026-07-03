@@ -127,7 +127,7 @@ function FilterChip({
       <AppText
         variant="body"
         weight="semibold"
-        color={active ? colors.primaryInk : colors.textSecondary}
+        color={active ? colors.primaryInk : colors.textPrimary}
       >
         {label}
       </AppText>
@@ -165,9 +165,10 @@ const styles = StyleSheet.create({
     minHeight: MIN_TOUCH_SIZE,
     paddingHorizontal: spacing.lg,
     borderRadius: radius.pill,
-    backgroundColor: colors.surfaceInset,
+    // 실서비스 필터 칩 문법: 흰 배경 + 1.5px 보더
+    backgroundColor: colors.surface,
     borderWidth: 1.5,
-    borderColor: 'transparent',
+    borderColor: colors.border,
   },
   chipActive: {
     backgroundColor: colors.primaryTint,

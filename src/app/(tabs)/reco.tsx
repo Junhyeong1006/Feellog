@@ -1,8 +1,8 @@
 /**
- * 추천 탭 — 오늘의 추천 카드 피드.
+ * 추천 탭 — 오늘의 추천 카드 피드 (v5: 풀사진 카드).
  * 취향 벡터로 활동을 정렬해 한 장씩 보여주고, [좋아요]/[관심없어요]로 피드백을 준다.
- * "한 번에 한 장" 집중 UX는 시니어 선택 피로 감소라는 제품 원칙 — 데스크탑에서도 유지하되,
- * 카드를 키우고 버튼을 카드 바로 아래 인라인으로 배치한다.
+ * "한 번에 한 장" 집중 UX는 시니어 선택 피로 감소라는 제품 원칙 — 데스크탑에서도 유지.
+ * 진행(1/12)은 우측 필 배지로, 카드가 화면의 주인공.
  */
 import { router } from 'expo-router';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
@@ -15,7 +15,7 @@ import { useBreakpoint } from '@/hooks/useBreakpoint';
 import { useReco } from '@/hooks/useReco';
 import { useAuth } from '@/providers/AuthProvider';
 import { EMPTY_FILTER, hasActiveFilter } from '@/state/recoFilter';
-import { colors, CONTENT_WIDTH, spacing } from '@/tokens';
+import { colors, CONTENT_WIDTH, radius, spacing } from '@/tokens';
 import { AppText, Button, Screen } from '@/ui';
 
 export default function RecoScreen() {
@@ -23,9 +23,10 @@ export default function RecoScreen() {
   const { loading, current, total, index, filter, setFilter, regions, react, reset } = useReco();
   const { isDesktop } = useBreakpoint();
   const filtered = hasActiveFilter(filter);
-  const name = session ? displayNameOf(profile) : '회원님';
-  // displayNameOf 폴백('회원님')에 호칭이 이미 붙어 있어 "회원님님"이 되지 않게 처리
-  const greetName = name.endsWith('님') ? name : `${name}님`;
+  // 게스트를 '회원님'이라 부르지 않는다 — 호칭 없는 주어 생략형으로
+  const name = session ? displayNameOf(profile) : null;
+  const greetName = name == null ? null : name.endsWith('님') ? name : `${name}님`;
+  const subtitle = greetName ? `${greetName}의 취향에 맞춰 골라봤어요` : '취향에 맞춰 골라봤어요';
 
   const maxWidth = isDesktop ? CONTENT_WIDTH.focus : undefined;
 
@@ -72,9 +73,18 @@ export default function RecoScreen() {
       footer={isDesktop ? undefined : actions || undefined}
     >
       <View style={styles.header}>
-        <AppText variant="h2">오늘의 추천</AppText>
-        <AppText variant="bodyLg" muted style={styles.subtitle}>
-          {greetName}의 취향에 맞춰 골라봤어요
+        <View style={styles.headerRow}>
+          <AppText variant="h1">오늘의 추천</AppText>
+          {total > 0 && (
+            <View style={styles.progressPill}>
+              <AppText variant="caption" weight="bold" color={colors.textSecondary} tabular>
+                {Math.min(index + 1, total)} / {total}
+              </AppText>
+            </View>
+          )}
+        </View>
+        <AppText variant="body" muted>
+          {subtitle}
         </AppText>
       </View>
 
@@ -85,13 +95,10 @@ export default function RecoScreen() {
           <ActivityCard
             activity={current.activity}
             score={current.score}
-            bandHeight={isDesktop ? 280 : undefined}
+            bandHeight={isDesktop ? 520 : 440}
             onPressDetail={() => router.push(`/activity/${current.activity.id}`)}
           />
           {isDesktop && actions}
-          <AppText variant="caption" muted center style={styles.progress}>
-            {Math.min(index + 1, total)} / {total}
-          </AppText>
         </View>
       ) : filtered && total === 0 ? (
         <EmptyState
@@ -132,18 +139,26 @@ const styles = StyleSheet.create({
   content: {
     paddingTop: spacing.lg,
     paddingBottom: spacing.lg,
-    gap: spacing.lg,
+    gap: spacing.base,
   },
   header: {
     gap: spacing.xs,
   },
-  subtitle: {
-    lineHeight: 27,
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  progressPill: {
+    minHeight: 32,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.pill,
+    backgroundColor: colors.surfaceInset,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   cardWrap: {
     gap: spacing.base,
-  },
-  progress: {
     marginTop: spacing.xs,
   },
   actions: {

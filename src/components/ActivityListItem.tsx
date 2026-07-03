@@ -1,11 +1,9 @@
 /**
- * ActivityListItem — 컴팩트 활동 행(홈 미리보기/마이 좋아요 목록).
- * 카테고리 스쿼클(틴트+잉크 글리프) + 제목/메타 + 우측 매칭% 빅넘버(tabular).
- * 토스식 행 해부: 좌 아이콘 칩 → 본문 → 우측 정렬 숫자.
+ * ActivityListItem — 컴팩트 활동 행(홈 미리보기/마이 좋아요 목록) (v5).
+ * 좌측 72px 실사진 썸네일(radius 10) + 제목/메타 + 우측 매칭% 빅넘버(tabular·그린).
+ * 파스텔 아이콘 타일 폐기 — 사진이 곧 상품(실서비스 문법).
  */
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { Image } from 'expo-image';
-import { useState } from 'react';
+import { Ionicons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import type { AppActivity } from '@/api/activities';
@@ -13,7 +11,7 @@ import { colors, radius, spacing } from '@/tokens';
 import { AppText } from '@/ui';
 import { formatPrice, formatRegion } from '@/utils/format';
 
-import { categoryVisual } from './categoryVisual';
+import { CategoryBand } from './CategoryBand';
 
 export interface ActivityListItemProps {
   activity: AppActivity;
@@ -22,10 +20,7 @@ export interface ActivityListItemProps {
 }
 
 export function ActivityListItem({ activity, score, onPress }: ActivityListItemProps) {
-  const visual = categoryVisual(activity.category);
   const region = formatRegion(activity.regionSido, activity.regionSigungu);
-  const [imgFailed, setImgFailed] = useState(false);
-  const showImage = activity.imageUrl != null && !imgFailed;
 
   return (
     <Pressable
@@ -34,31 +29,28 @@ export function ActivityListItem({ activity, score, onPress }: ActivityListItemP
       accessibilityLabel={`${activity.title} 자세히 보기`}
       style={({ pressed }) => [styles.row, pressed && styles.pressed]}
     >
-      <View style={[styles.thumb, !showImage && { backgroundColor: visual.accent }]}>
-        {showImage ? (
-          <Image
-            source={{ uri: activity.imageUrl! }}
-            style={styles.image}
-            contentFit="cover"
-            onError={() => setImgFailed(true)}
-          />
-        ) : (
-          <MaterialCommunityIcons name={visual.icon} size={26} color={visual.ink} />
-        )}
+      <View style={styles.thumb}>
+        <CategoryBand
+          imageUrl={activity.imageUrl}
+          category={activity.category}
+          height={72}
+          showLabel={false}
+          glyphSize={24}
+        />
       </View>
 
       <View style={styles.body}>
         <AppText variant="body" weight="semibold" numberOfLines={1}>
           {activity.title}
         </AppText>
-        <AppText variant="caption" muted numberOfLines={1}>
+        <AppText variant="caption" muted numberOfLines={1} tabular>
           {region} · {formatPrice(activity.price)}
         </AppText>
       </View>
 
       {score != null ? (
         <View style={styles.scoreWrap}>
-          <AppText variant="title" weight="bold" color={colors.mintInk} tabular>
+          <AppText variant="title" weight="bold" color={colors.primary} tabular>
             {score}%
           </AppText>
           <AppText variant="caption" muted>
@@ -84,17 +76,10 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   thumb: {
-    width: 52,
-    height: 52,
-    // 스쿼클(정원 금지 — 디자인 리서치) — 틴트 배경 + 잉크 글리프
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: 72,
+    height: 72,
+    borderRadius: radius.md,
     overflow: 'hidden',
-  },
-  image: {
-    width: '100%',
-    height: '100%',
   },
   body: {
     flex: 1,

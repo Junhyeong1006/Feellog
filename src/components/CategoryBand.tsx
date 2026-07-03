@@ -1,17 +1,17 @@
 /**
- * CategoryBand — 사진 없는 활동/게시글의 상단 밴드(이모지+파스텔 원 대체).
- * 문법: 틴트 배경 + 좌측 잉크 글리프·카테고리 라벨 + 우하단 대형 고스트 글리프(모서리 밖으로 잘리게).
- * '잘린 오버사이즈 그래픽'은 실서비스 배너의 표준 구도 — 부모 카드에 overflow:hidden 필수.
- * 이미지가 있으면 이미지 우선, 로드 실패 시 이 밴드로 폴백한다.
+ * CategoryBand — 활동/게시글의 사진 블록 (v5: 사진 우선 원칙).
+ * 우선순위: 원격 imageUrl > 번들 카테고리 실사진 > 중립 글리프 밴드(최후 폴백).
+ * 오버레이(그라데이션·배지·텍스트온포토)는 호출부가 얹는다 — 이 컴포넌트는 사진면만 책임.
  */
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { spacing } from '@/tokens';
+import { colors, spacing } from '@/tokens';
 import { AppText } from '@/ui';
 
+import { categoryPhoto } from './categoryPhoto';
 import { categoryVisual } from './categoryVisual';
 
 export interface CategoryBandProps {
@@ -19,9 +19,9 @@ export interface CategoryBandProps {
   category?: string | null;
   /** 밴드 높이(부모가 지정) */
   height: number;
-  /** 카테고리 라벨 표시(카드용 true, 좁은 썸네일 false) */
+  /** 글리프 폴백일 때 카테고리 라벨 표시 */
   showLabel?: boolean;
-  /** 좌측 글리프 크기(기본 34) */
+  /** 글리프 폴백의 아이콘 크기(기본 34) */
   glyphSize?: number;
 }
 
@@ -32,10 +32,15 @@ export function CategoryBand({
   showLabel = true,
   glyphSize = 34,
 }: CategoryBandProps) {
-  const visual = categoryVisual(category);
-  const [failed, setFailed] = useState(false);
+  const [remoteFailed, setRemoteFailed] = useState(false);
+  const bundled = categoryPhoto(category);
 
-  if (imageUrl && !failed) {
+  // 컴포넌트가 다른 활동으로 재사용될 때(추천 피드) 이전 실패 상태가 새 이미지를 가리지 않게 리셋
+  useEffect(() => {
+    setRemoteFailed(false);
+  }, [imageUrl]);
+
+  if (imageUrl && !remoteFailed) {
     return (
       <View style={[styles.band, { height }]}>
         <Image
@@ -43,27 +48,29 @@ export function CategoryBand({
           style={styles.fill}
           contentFit="cover"
           transition={150}
-          onError={() => setFailed(true)}
+          placeholder={undefined}
+          onError={() => setRemoteFailed(true)}
         />
       </View>
     );
   }
 
-  // 고스트 글리프: 밴드 높이에 비례(잘림이 핵심)
-  const ghostSize = Math.round(height * 1.15);
+  if (bundled) {
+    return (
+      <View style={[styles.band, { height }]}>
+        <Image source={bundled} style={styles.fill} contentFit="cover" transition={150} />
+      </View>
+    );
+  }
 
+  // 최후 폴백: 중립 글리프 밴드(사진이 없는 미지의 카테고리)
+  const visual = categoryVisual(category);
   return (
-    <View style={[styles.band, { height, backgroundColor: visual.accent }]}>
-      <MaterialCommunityIcons
-        name={visual.icon}
-        size={ghostSize}
-        color={visual.ink}
-        style={[styles.ghost, { right: -ghostSize * 0.18, bottom: -ghostSize * 0.22 }]}
-      />
+    <View style={[styles.band, styles.fallback, { height }]}>
       <View style={styles.front}>
-        <MaterialCommunityIcons name={visual.icon} size={glyphSize} color={visual.ink} />
+        <MaterialCommunityIcons name={visual.icon} size={glyphSize} color={colors.textSecondary} />
         {showLabel && category != null && (
-          <AppText variant="body" weight="bold" color={visual.ink}>
+          <AppText variant="body" weight="semibold" color={colors.textSecondary}>
             {category}
           </AppText>
         )}
@@ -75,20 +82,19 @@ export function CategoryBand({
 const styles = StyleSheet.create({
   band: {
     overflow: 'hidden',
+    backgroundColor: colors.surfaceAlt, // 사진 로딩 전 플레이스홀더 면
     justifyContent: 'center',
   },
   fill: {
     width: '100%',
     height: '100%',
   },
-  ghost: {
-    position: 'absolute',
-    opacity: 0.13,
+  fallback: {
+    alignItems: 'center',
   },
   front: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
-    paddingHorizontal: spacing.lg,
   },
 });

@@ -11,7 +11,7 @@ import { StyleSheet, View } from 'react-native';
 import Svg, { Circle, Line, Polygon, Text as SvgText } from 'react-native-svg';
 
 import { AXES, AXIS_META, type AxisVector } from '@/core';
-import { colors, fontFamily, palette } from '@/tokens';
+import { colors, fontFamily } from '@/tokens';
 
 export interface RadarChartProps {
   vector: AxisVector;
@@ -23,7 +23,7 @@ const GRID_LEVELS = [0.25, 0.5, 0.75, 1];
 const H_PAD = 90; // 좌우 라벨('실용·성취' 15px 5자) 공간
 const V_PAD = 46; // 상하 라벨 공간
 const LABEL_R = 20; // 꼭짓점에서 라벨 중심까지 거리
-const FONT = 15; // 라벨 글씨(화면 px 고정 — 축소 금지)
+const FONT = 16; // 라벨 글씨(화면 px 고정 — 캡션 하한 16, 축소 금지)
 
 /** -100..100 → 0..1 (중심=negLabel 극, 바깥=posLabel 극) */
 function norm(value: number): number {
@@ -71,7 +71,7 @@ export function RadarChart({ vector, maxWidth = 448 }: RadarChartProps) {
         {/* 데이터 영역 */}
         <Polygon
           points={toStr(dataPts)}
-          fill={palette.blue500}
+          fill={colors.primary}
           fillOpacity={0.22}
           stroke={colors.primary}
           strokeWidth={2.5}

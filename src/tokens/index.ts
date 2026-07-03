@@ -2,7 +2,7 @@
  * Feellog 디자인 토큰 — 단일 진입점(SSOT)
  * 웹·앱 컴포넌트는 모두 여기서 토큰을 가져온다. 색상 하드코딩 금지.
  */
-export { colors, palette, brand, type ColorToken, type BrandToken } from './colors';
+export { colors, palette, brand, photoOverlay, type ColorToken, type BrandToken } from './colors';
 export { typography, fontFamily, fontWeight, type TypographyToken } from './typography';
 export {
   spacing,

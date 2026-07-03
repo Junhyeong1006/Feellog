@@ -1,6 +1,7 @@
 /**
- * Badge — 작은 캡슐 라벨. 보조성향 배지, 매칭 %, 태그 칩 등에 사용.
- * tone으로 색을 바꾼다. size로 칩(작게)/배지(기본).
+ * Badge — 작은 라벨 (v5). 매칭 %, 보조성향, 키워드 태그 등.
+ * 톤: primary(그린 틴트)·accent(테라코타 틴트)·neutral(중립 면)·onPhoto(사진 위 흰 필).
+ * 원색 텍스트가 아닌 딥 잉크 텍스트(전 조합 AA — 컬러 리서치 계산 검증).
  */
 import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
@@ -8,7 +9,7 @@ import { colors, palette, radius, spacing } from '@/tokens';
 
 import { AppText } from './Text';
 
-export type BadgeTone = 'primary' | 'mint' | 'coral' | 'neutral' | 'success';
+export type BadgeTone = 'primary' | 'accent' | 'neutral' | 'success' | 'onPhoto';
 export type BadgeSize = 'sm' | 'md';
 
 interface ToneStyle {
@@ -16,20 +17,20 @@ interface ToneStyle {
   fg: string;
 }
 
-// 틴트 배경 + 잉크 텍스트(원색 텍스트는 AA 미달 — 디자인 리서치)
 const TONES: Record<BadgeTone, ToneStyle> = {
-  primary: { bg: colors.primaryTint, fg: colors.primaryInk },
-  mint: { bg: palette.mint, fg: colors.mintInk },
-  coral: { bg: palette.coralTint, fg: colors.coralInk },
+  primary: { bg: colors.primaryTint, fg: colors.primary },
+  accent: { bg: colors.accentTint, fg: colors.accent },
   neutral: { bg: colors.surfaceInset, fg: colors.textSecondary },
-  success: { bg: palette.mint, fg: colors.mintInk },
+  success: { bg: colors.primaryTint, fg: colors.primary },
+  /** 사진 위 오버레이 배지(흰 필 + 그린 텍스트) */
+  onPhoto: { bg: 'rgba(255,255,255,0.94)', fg: palette.green600 },
 };
 
 export interface BadgeProps {
   label: string;
   tone?: BadgeTone;
   size?: BadgeSize;
-  /** square=8px 라운드 사각(키워드 태그) · pill=캡슐(상태/매칭 배지, 기본) */
+  /** square=6px 라운드 사각(키워드 태그) · pill=캡슐(상태/매칭 배지, 기본) */
   shape?: 'pill' | 'square';
   /** 라벨 왼쪽 슬롯(아이콘/점) */
   leftSlot?: React.ReactNode;
@@ -49,7 +50,7 @@ export function Badge({ label, tone = 'primary', size = 'md', shape = 'pill', le
       ]}
     >
       {leftSlot}
-      <AppText variant="caption" weight="semibold" color={t.fg}>
+      <AppText variant="caption" weight="bold" color={t.fg}>
         {label}
       </AppText>
     </View>
@@ -69,10 +70,10 @@ const styles = StyleSheet.create({
   },
   sm: {
     paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
+    paddingVertical: 3,
   },
   md: {
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm - 2, // 6 — pill 높이 리듬 유지
+    paddingVertical: 6,
   },
 });

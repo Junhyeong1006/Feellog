@@ -39,7 +39,7 @@ export function LegalDocument({
           <AppText variant="caption" muted>
             시행일 {effectiveDate} · {version}
           </AppText>
-          {draft && <Badge label="초안" tone="coral" size="sm" />}
+          {draft && <Badge label="초안" tone="accent" size="sm" />}
         </View>
 
         {sections.map((s, i) => (

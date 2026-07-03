@@ -1,6 +1,6 @@
 /**
- * Card — 흰 표면 + 헤어라인 보더 + 부드러운 웜 그림자 카드.
- * 보더가 실제 경계(노안의 대비감 저하 대응), 그림자는 깊이감 보조(디자인 리서치).
+ * Card — 흰 표면 + 헤어라인 보더 카드 (v5: 기본 그림자 없음).
+ * 실서비스 실측: 콘텐츠 카드에 그림자를 주는 곳 0곳 — 경계는 보더가 담당(노안 대비감).
  * onPress를 주면 눌림/호버 피드백이 있는 Pressable로 동작한다(추천/활동 카드).
  * shadow/padding/radius를 prop으로 바꿀 수 있어 교체가 쉽다.
  */
@@ -21,7 +21,7 @@ type WebPressableState = PressableStateCallbackType & { hovered?: boolean };
 export interface CardProps {
   children: React.ReactNode;
   onPress?: () => void;
-  /** 그림자 강도 (기본 card) */
+  /** 그림자 강도 (기본 none — 경계는 헤어라인 보더) */
   elevation?: ShadowToken;
   /** 내부 패딩(기본 lg=20) */
   padding?: keyof typeof spacing;
@@ -34,7 +34,7 @@ export interface CardProps {
 export function Card({
   children,
   onPress,
-  elevation = 'card',
+  elevation = 'none',
   padding = 'lg',
   cornerRadius = 'xl',
   accessibilityLabel,
@@ -77,8 +77,8 @@ const styles = StyleSheet.create({
     borderColor: colors.borderOnWhite,
   },
   hovered: {
-    transform: [{ translateY: -2 }],
-    ...shadows.raised,
+    transform: [{ translateY: -1 }],
+    ...shadows.card,
   },
   pressed: {
     opacity: 0.96,

@@ -1,10 +1,8 @@
 /**
- * Button — 캡슐형 버튼 프리미티브 (시니어 터치 48dp+ 강제).
+ * Button — 버튼 프리미티브 (시니어 터치 48dp+ 강제, v5: 12px 라운드).
  * variant로 색/톤을 바꾼다. 소셜(kakao/google/apple)은 브랜드 토큰 사용.
  * leftSlot에 아이콘/로고 노드를 넣을 수 있다. 기본 fullWidth.
- *
- * 라벨은 20/700(lg)·19/700(md) — 흰 글자 on 브랜드 블루(3.2:1)는
- * WCAG "대형 텍스트(굵게 ≥18.66px)"라야 통과한다(디자인 리서치).
+ * 흰 글자 on 브랜드 그린은 6.4:1 — 일반 텍스트 AA도 통과(v4 블루의 대형텍스트 제약 해소).
  */
 import {
   ActivityIndicator,
@@ -59,7 +57,6 @@ interface Tone {
 const TONES: Record<ButtonVariant, Tone> = {
   primary: { bg: colors.primary, bgPressed: colors.primaryPressed, fg: colors.onPrimary },
   secondary: { bg: colors.secondaryBg, bgPressed: colors.surfaceAlt, fg: colors.secondaryText },
-  // ghost 텍스트는 잉크 블루(원색 blue500은 흰/크림 배경 대비 미달)
   ghost: { bg: 'transparent', bgPressed: colors.primaryTint, fg: colors.primaryInk },
   outline: { bg: colors.surface, bgPressed: colors.surfaceInset, fg: colors.textPrimary, border: colors.border },
   danger: { bg: colors.danger, bgPressed: colors.danger, fg: colors.onPrimary },
@@ -125,7 +122,7 @@ export function Button({
 const styles = StyleSheet.create({
   base: {
     minHeight: MIN_TOUCH_SIZE,
-    // 버튼은 16px 라운드(형태 위계: pill은 칩·배지 전용 — 디자인 리서치)
+    // 12px 라운드(실서비스 버튼 8~14px 실측 — pill은 칩·배지 전용)
     borderRadius: radius.lg,
     alignItems: 'center',
     justifyContent: 'center',
@@ -149,12 +146,12 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   labelLg: {
-    fontSize: 20,
-    lineHeight: 30,
-  },
-  labelMd: {
     fontSize: 19,
     lineHeight: 28,
+  },
+  labelMd: {
+    fontSize: 18,
+    lineHeight: 26,
   },
   content: {
     flexDirection: 'row',

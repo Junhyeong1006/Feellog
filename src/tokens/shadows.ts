@@ -1,7 +1,8 @@
 /**
- * Feellog 디자인 토큰 — 그림자 ("따뜻한 종이" 톤의 웜 브라운 그림자)
- * 크림 캔버스에는 쿨 블랙 그림자가 차갑게 떠 보여서 웜 톤으로 통일(디자인 리서치).
- * 그림자는 옅게 — 카드의 실제 경계는 헤어라인 보더(colors.borderOnWhite)가 담당한다(노안 대비).
+ * Feellog 디자인 토큰 — 그림자 (v5)
+ *
+ * 실서비스 실측: 콘텐츠 카드에 그림자를 주는 곳 0곳 — 그림자는 바텀시트·드롭다운·
+ * 고정 CTA·사진 히어로 카드 전용. 카드의 경계는 헤어라인 보더가 담당한다.
  * RN/웹 모두 동작하도록 elevation(안드)도 함께 둔다.
  */
 import { Platform } from 'react-native';
@@ -15,7 +16,7 @@ type Shadow = {
 };
 
 const make = (yOffset: number, radius: number, opacity: number, elevation: number): Shadow => ({
-  shadowColor: '#3C3220', // 웜 브라운(크림 캔버스와 동계열)
+  shadowColor: '#1A1D1F',
   shadowOffset: { width: 0, height: yOffset },
   shadowOpacity: opacity,
   shadowRadius: radius,
@@ -24,9 +25,12 @@ const make = (yOffset: number, radius: number, opacity: number, elevation: numbe
 
 export const shadows = {
   none: Platform.select({ default: {} }) as object,
-  card: make(4, 10, 0.08, 3), // 일반 카드
-  raised: make(8, 18, 0.14, 8), // 떠 있는 카드(추천 카드·시트)
-  soft: make(2, 6, 0.05, 2), // 아주 옅은
+  /** 아주 옅은 1레이어(hover·구분 보조) */
+  soft: make(1, 3, 0.06, 1),
+  /** 일반(사진 히어로 카드 등 꼭 필요한 곳만) */
+  card: make(2, 8, 0.08, 2),
+  /** 떠 있는 요소(바텀시트·드롭다운·hover 리프트) */
+  raised: make(8, 24, 0.12, 8),
 } as const;
 
 export type ShadowToken = keyof typeof shadows;

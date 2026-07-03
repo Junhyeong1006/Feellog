@@ -1,6 +1,7 @@
 /**
  * 커뮤니티 샘플 포스트(미리보기용 로컬 데이터). 실제 글쓰기/DB 연동은 다음 단계.
- * authorType으로 '우리 유형' 필터, category로 사진 밴드 이모지를 고른다.
+ * authorType으로 '우리 유형' 필터, category로 번들 사진(categoryPhoto)을 고른다.
+ * 카피 규칙: 이모지 금지, 구어체 불균질(실사용자 톤) — de-AI 리서치 반영.
  */
 import type { MainType } from '@/core';
 
@@ -22,7 +23,7 @@ export const SAMPLE_POSTS: CommunityPost[] = [
     authorName: '김영자',
     authorType: 'handcraft_achiever',
     timeAgo: '10분 전',
-    body: '도자기 공방에서 첫 컵을 완성했어요. 삐뚤빼뚤해도 세상에 하나뿐인 내 컵이라 너무 뿌듯하네요 🥰',
+    body: '도자기 공방에서 첫 컵을 완성했어요. 삐뚤빼뚤해도 세상에 하나뿐인 내 컵이라 얼마나 뿌듯한지 몰라요.',
     category: '공예',
     hasPhoto: true,
     likeCount: 24,
@@ -99,7 +100,7 @@ export const SAMPLE_POSTS: CommunityPost[] = [
     authorName: '서명자',
     authorType: 'warm_social',
     timeAgo: '어제',
-    body: '주말 텃밭에서 첫 상추 수확했어요! 이웃들과 나눠 먹으니 두 배로 맛있네요 🥬',
+    body: '주말 텃밭에서 첫 상추를 수확했어요. 이웃들과 나눠 먹으니 두 배로 맛있네요.',
     category: '텃밭',
     hasPhoto: true,
     likeCount: 38,

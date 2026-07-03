@@ -1,22 +1,24 @@
 /**
- * 로그인 — 소셜 전용. 노출 provider는 config(ENABLED_PROVIDERS)로 토글.
- * (현재 구글·애플; 카카오는 비즈앱/OIDC 이슈 해결 후 config에 다시 추가)
+ * 로그인 (v5: 사진 히어로) — 소셜 전용. 노출 provider는 config(ENABLED_PROVIDERS)로 토글.
+ * 모바일: 풀블리드 실사진 히어로(하단 딤 + 흰 헤드라인) + 흰 시트(버튼).
+ * 데스크탑: [사진 패널 | 로그인 컬럼] 스플릿.
  * '둘러보기'로 비로그인 체험도 가능(결과 저장은 로그인 후).
- * 하단 문구로 약관/개인정보 동의를 고지하고 전문 링크를 제공.
- * 데스크탑: [브랜드 패널 | 로그인 카드] 스플릿 레이아웃.
  */
-import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Link, router } from 'expo-router';
 import { useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AuthCancelledError, signInWithProvider, type OAuthProvider } from '@/api/auth';
+import { HERO_PHOTOS } from '@/components/categoryPhoto';
 import { ENABLED_PROVIDERS } from '@/config/auth';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
 import { track } from '@/lib/analytics';
 import { useAuth } from '@/providers/AuthProvider';
-import { colors, palette, radius, spacing } from '@/tokens';
-import { AppText, Button, Logo, Screen, type ButtonVariant } from '@/ui';
+import { colors, MAX_CONTENT_WIDTH, photoOverlay, spacing } from '@/tokens';
+import { AppText, Button, Logo, type ButtonVariant } from '@/ui';
 
 type Pending = OAuthProvider | 'guest' | null;
 
@@ -26,15 +28,13 @@ const PROVIDER_BUTTON: Record<OAuthProvider, { label: string; variant: ButtonVar
   apple: { label: 'Apple로 시작하기', variant: 'apple' },
 };
 
-const FEATURES = [
-  { icon: 'compass-outline', tint: palette.blueTint, ink: colors.primaryInk, text: '12개의 장면으로 알아보는 나의 여가 성향' },
-  { icon: 'sparkles-outline', tint: palette.mint, ink: colors.mintInk, text: '취향에 꼭 맞는 활동을 한 장씩 추천' },
-  { icon: 'chatbubbles-outline', tint: palette.coralTint, ink: colors.coralInk, text: '같은 취향 이웃들과 나누는 취미 이야기' },
-] as const;
+const HEADLINE = '취미가 생기면,\n하루가 달라져요';
+const SUBLINE = '나에게 맞는 취미를 2분 만에 찾아보세요';
 
 export default function LoginScreen() {
   const { enterGuest, configured } = useAuth();
   const { isDesktop } = useBreakpoint();
+  const insets = useSafeAreaInsets();
   const [pending, setPending] = useState<Pending>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -119,35 +119,30 @@ export default function LoginScreen() {
   if (isDesktop) {
     return (
       <View style={styles.deskRoot}>
-        {/* 브랜드 패널 */}
-        <View style={styles.brandPane}>
-          <View style={styles.brandInner}>
-            <Logo size={54} withMark />
-            <AppText variant="h2" center style={styles.brandTagline}>
-              취미를 찾고, 기록하고,{'\n'}나누는 공간
+        {/* 사진 패널 */}
+        <View style={styles.photoPane}>
+          <Image source={HERO_PHOTOS.walk} style={StyleSheet.absoluteFill} contentFit="cover" />
+          <LinearGradient colors={photoOverlay.bottom} locations={[0.35, 0.62, 1]} style={StyleSheet.absoluteFill} />
+          {/* 상단 스크림 — 밝은 사진 위 흰 워드마크 대비 확보(접근성 리뷰) */}
+          <LinearGradient colors={photoOverlay.top} style={styles.topScrim} />
+          <View style={styles.photoLogoDesk}>
+            <Logo lockup size={26} color={colors.onPhoto} />
+          </View>
+          <View style={styles.photoCopyDesk}>
+            <AppText variant="display" color={colors.onPhoto} style={styles.headlineDesk}>
+              {HEADLINE}
             </AppText>
-            <View style={styles.features}>
-              {FEATURES.map((f) => (
-                <View key={f.icon} style={styles.featureRow}>
-                  <View style={[styles.featureIcon, { backgroundColor: f.tint }]}>
-                    <Ionicons name={f.icon} size={22} color={f.ink} />
-                  </View>
-                  <AppText variant="body" muted style={styles.featureText}>
-                    {f.text}
-                  </AppText>
-                </View>
-              ))}
-            </View>
+            <AppText variant="bodyLg" color={colors.onPhotoSoft}>
+              {SUBLINE}
+            </AppText>
           </View>
         </View>
 
-        {/* 로그인 패널 */}
+        {/* 로그인 컬럼 */}
         <View style={styles.authPane}>
           <View style={styles.authCard}>
-            <AppText variant="h2" center>
-              시작하기
-            </AppText>
-            <AppText variant="body" muted center style={styles.authSub}>
+            <AppText variant="h1">시작하기</AppText>
+            <AppText variant="body" muted style={styles.authSub}>
               간편하게 로그인하고{'\n'}나에게 맞는 취미를 찾아보세요
             </AppText>
             {actions}
@@ -159,16 +154,36 @@ export default function LoginScreen() {
   }
 
   return (
-    <Screen footer={legal}>
-      <View style={styles.hero}>
-        <Logo size={46} withMark />
-        <AppText variant="bodyLg" muted center style={styles.tagline}>
-          취미를 찾고, 기록하고,{'\n'}나누는 공간
-        </AppText>
-      </View>
+    <View style={styles.mobileRoot}>
+      <ScrollView contentContainerStyle={styles.mobileScroll} bounces={false} showsVerticalScrollIndicator={false}>
+        {/* 사진 히어로 */}
+        <View style={styles.hero}>
+          <Image source={HERO_PHOTOS.walk} style={StyleSheet.absoluteFill} contentFit="cover" />
+          <LinearGradient colors={photoOverlay.bottom} locations={[0.3, 0.6, 1]} style={StyleSheet.absoluteFill} />
+          {/* 상단 스크림 — 밝은 사진 위 흰 워드마크 대비 확보(접근성 리뷰) */}
+          <LinearGradient colors={photoOverlay.top} style={styles.topScrim} />
+          <View style={[styles.heroLogo, { top: insets.top + spacing.lg }]}>
+            <Logo lockup size={24} color={colors.onPhoto} />
+          </View>
+          <View style={styles.heroCopy}>
+            <AppText variant="h1" color={colors.onPhoto}>
+              {HEADLINE}
+            </AppText>
+            <AppText variant="body" color={colors.onPhotoSoft} style={styles.subline}>
+              {SUBLINE}
+            </AppText>
+          </View>
+        </View>
 
-      {actions}
-    </Screen>
+        {/* 액션 시트 — 768~1023px 창에서 버튼이 전체 폭으로 늘어지지 않게 폰 컬럼 유지 */}
+        <View style={[styles.sheet, { paddingBottom: insets.bottom + spacing.lg }]}>
+          <View style={styles.sheetInner}>
+            {actions}
+            {legal}
+          </View>
+        </View>
+      </ScrollView>
+    </View>
   );
 }
 
@@ -178,18 +193,50 @@ function messageOf(e: unknown): string {
 }
 
 const styles = StyleSheet.create({
-  hero: {
+  mobileRoot: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.lg,
+    backgroundColor: colors.background,
   },
-  tagline: {
-    lineHeight: 30,
+  mobileScroll: {
+    flexGrow: 1,
+  },
+  hero: {
+    height: 420,
+    justifyContent: 'flex-end',
+  },
+  topScrim: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 140,
+  },
+  heroLogo: {
+    position: 'absolute',
+    left: spacing.xl,
+  },
+  heroCopy: {
+    padding: spacing.xl,
+    paddingBottom: spacing.xl,
+    gap: spacing.sm,
+  },
+  subline: {
+    lineHeight: 26,
+  },
+  sheet: {
+    flex: 1,
+    backgroundColor: colors.background,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.xl,
+  },
+  sheetInner: {
+    width: '100%',
+    maxWidth: MAX_CONTENT_WIDTH,
+    alignSelf: 'center',
+    gap: spacing.lg,
   },
   actions: {
     gap: spacing.md,
-    paddingBottom: spacing.sm,
   },
   notice: {
     paddingHorizontal: spacing.sm,
@@ -209,49 +256,27 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     backgroundColor: colors.background,
   },
-  brandPane: {
-    flex: 1,
-    // "파란 배경 = 장식" 안티패턴 회피: 브랜드 블루는 인터랙션 전용(디자인 리서치)
-    backgroundColor: colors.surfaceAlt,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: spacing.huge,
+  photoPane: {
+    flex: 11,
+    justifyContent: 'flex-end',
   },
-  brandInner: {
-    maxWidth: 460,
-    alignItems: 'center',
-    gap: spacing.xl,
+  photoLogoDesk: {
+    position: 'absolute',
+    top: spacing.xxl,
+    left: spacing.xxl,
   },
-  brandTagline: {
-    lineHeight: 36,
-  },
-  features: {
-    gap: spacing.base,
-    marginTop: spacing.md,
-    alignSelf: 'stretch',
-  },
-  featureRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  photoCopyDesk: {
+    padding: spacing.xxl,
+    paddingBottom: spacing.xxxl,
     gap: spacing.md,
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.base,
+    maxWidth: 560,
   },
-  featureIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 14, // 스쿼클(정원 금지)
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  featureText: {
-    flex: 1,
-    lineHeight: 26,
+  headlineDesk: {
+    lineHeight: 48,
   },
   authPane: {
-    width: 520,
+    flex: 9,
+    maxWidth: 560,
     alignItems: 'center',
     justifyContent: 'center',
     padding: spacing.huge,
@@ -262,6 +287,6 @@ const styles = StyleSheet.create({
     gap: spacing.lg,
   },
   authSub: {
-    lineHeight: 26,
+    lineHeight: 27,
   },
 });
