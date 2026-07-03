@@ -9,12 +9,13 @@ import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
 import { displayNameOf } from '@/api/profiles';
 import { ActivityCard } from '@/components/ActivityCard';
+import { EmptyState } from '@/components/EmptyState';
 import { RecoFilterBar } from '@/components/RecoFilterBar';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
 import { useReco } from '@/hooks/useReco';
 import { useAuth } from '@/providers/AuthProvider';
 import { EMPTY_FILTER, hasActiveFilter } from '@/state/recoFilter';
-import { colors, CONTENT_WIDTH, radius, spacing } from '@/tokens';
+import { colors, CONTENT_WIDTH, spacing } from '@/tokens';
 import { AppText, Button, Screen } from '@/ui';
 
 export default function RecoScreen() {
@@ -93,43 +94,26 @@ export default function RecoScreen() {
           </AppText>
         </View>
       ) : filtered && total === 0 ? (
-        <View style={styles.empty}>
-          <View style={styles.emptyIcon}>
-            <AppText style={styles.emptyEmoji}>🔍</AppText>
-          </View>
-          <AppText variant="h2" center>
-            조건에 맞는 활동이 없어요
-          </AppText>
-          <AppText variant="bodyLg" muted center style={styles.emptyBody}>
-            지역이나 참가비 조건을{'\n'}조금 넓혀보시겠어요?
-          </AppText>
-          <Button
-            label="필터 초기화"
-            variant="secondary"
-            onPress={() => setFilter(EMPTY_FILTER)}
-            style={styles.resetBtn}
-          />
-        </View>
+        <EmptyState
+          spot="search"
+          title="조건에 맞는 활동이 없어요"
+          body={'지역이나 참가비 조건을\n조금 넓혀보시겠어요?'}
+          action={<Button label="필터 초기화" variant="secondary" onPress={() => setFilter(EMPTY_FILTER)} />}
+        />
       ) : (
-        <View style={styles.empty}>
-          <View style={styles.emptyIcon}>
-            <AppText style={styles.emptyEmoji}>🎉</AppText>
-          </View>
-          <AppText variant="h2" center>
-            오늘의 추천을 다 봤어요
-          </AppText>
-          <AppText variant="bodyLg" muted center style={styles.emptyBody}>
-            좋아요로 남긴 취향은{'\n'}다음 추천에 바로 반영돼요
-          </AppText>
-          <Button label="다시 보기" variant="secondary" onPress={reset} style={styles.resetBtn} />
-          {guest && !session && (
-            <Button
-              label="로그인하고 저장하기"
-              variant="ghost"
-              onPress={() => router.replace('/login')}
-            />
-          )}
-        </View>
+        <EmptyState
+          spot="compass"
+          title="오늘의 추천을 다 봤어요"
+          body={'좋아요로 남긴 취향은\n다음 추천에 바로 반영돼요'}
+          action={
+            <>
+              <Button label="다시 보기" variant="secondary" onPress={reset} />
+              {guest && !session && (
+                <Button label="로그인하고 저장하기" variant="ghost" onPress={() => router.replace('/login')} />
+              )}
+            </>
+          }
+        />
       )}
     </Screen>
   );
@@ -168,31 +152,5 @@ const styles = StyleSheet.create({
   },
   actionItem: {
     flex: 1,
-  },
-  empty: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.base,
-    paddingVertical: spacing.xxl,
-  },
-  emptyIcon: {
-    width: 88,
-    height: 88,
-    borderRadius: radius.pill,
-    backgroundColor: colors.primaryTint,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  emptyEmoji: {
-    fontSize: 46,
-    lineHeight: 54,
-  },
-  emptyBody: {
-    lineHeight: 28,
-  },
-  resetBtn: {
-    marginTop: spacing.sm,
-    alignSelf: 'stretch',
   },
 });

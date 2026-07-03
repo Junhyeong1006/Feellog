@@ -8,6 +8,7 @@ import { useMemo, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
 import type { Post } from '@/api/community';
+import { EmptyState } from '@/components/EmptyState';
 import { PostCard } from '@/components/PostCard';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
 import { useCommunity } from '@/hooks/useCommunity';
@@ -74,25 +75,21 @@ export default function CommunityScreen() {
           <ActivityIndicator color={colors.primary} />
         </View>
       ) : error && posts.length === 0 ? (
-        <View style={styles.empty}>
-          <AppText variant="body" muted center style={styles.emptyText}>
-            일시적인 문제로 글을 불러오지 못했어요.{'\n'}잠시 후 다시 시도해 주세요.
-          </AppText>
-          <Button label="다시 시도" variant="secondary" onPress={() => void reload()} />
-        </View>
+        <EmptyState
+          spot="cloud"
+          title="글을 불러오지 못했어요"
+          body={'일시적인 문제예요.\n잠시 후 다시 시도해 주세요.'}
+          action={<Button label="다시 시도" variant="secondary" onPress={() => void reload()} />}
+        />
       ) : showMineEmpty ? (
-        <View style={styles.empty}>
-          <AppText variant="body" muted center style={styles.emptyText}>
-            성향 테스트를 하면{'\n'}같은 유형 이웃들의 글을 볼 수 있어요.
-          </AppText>
-          <Button label="성향 테스트 하기" variant="secondary" onPress={() => router.push('/test')} />
-        </View>
+        <EmptyState
+          spot="compass"
+          title="아직 나의 유형이 없어요"
+          body={'성향 테스트를 하면\n같은 유형 이웃들의 글을 볼 수 있어요.'}
+          action={<Button label="성향 테스트 하기" variant="secondary" onPress={() => router.push('/test')} />}
+        />
       ) : filtered.length === 0 ? (
-        <View style={styles.empty}>
-          <AppText variant="body" muted center style={styles.emptyText}>
-            아직 글이 없어요.{'\n'}첫 이야기를 남겨보세요.
-          </AppText>
-        </View>
+        <EmptyState spot="chat" title="아직 글이 없어요" body="첫 이야기를 남겨보세요." />
       ) : (
         <View style={styles.list}>
           {filtered.map((post) => (
@@ -133,13 +130,5 @@ const styles = StyleSheet.create({
   },
   loading: {
     paddingVertical: spacing.xxl,
-  },
-  empty: {
-    alignItems: 'center',
-    gap: spacing.base,
-    paddingVertical: spacing.xxl,
-  },
-  emptyText: {
-    lineHeight: 26,
   },
 });

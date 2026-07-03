@@ -7,6 +7,8 @@ import { StyleSheet, View } from 'react-native';
 import { colors, radius, spacing } from '@/tokens';
 import { AppText, Button } from '@/ui';
 
+import { SpotIllustration } from './EmptyState';
+
 export interface AppErrorFallbackProps {
   error: Error;
   retry: () => void;
@@ -16,9 +18,9 @@ export function AppErrorFallback({ error, retry }: AppErrorFallbackProps) {
   return (
     <View style={styles.root}>
       <View style={styles.card}>
-        <AppText style={styles.emoji} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-          🌧️
-        </AppText>
+        <View style={styles.spot}>
+          <SpotIllustration kind="cloud" size={104} />
+        </View>
         <AppText variant="h2" center>
           잠시 문제가 생겼어요
         </AppText>
@@ -53,10 +55,8 @@ const styles = StyleSheet.create({
     gap: spacing.lg,
     alignItems: 'stretch',
   },
-  emoji: {
-    fontSize: 56,
-    lineHeight: 64,
-    textAlign: 'center',
+  spot: {
+    alignItems: 'center',
   },
   body: {
     lineHeight: 26,

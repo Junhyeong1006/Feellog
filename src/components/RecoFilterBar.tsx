@@ -2,6 +2,7 @@
  * RecoFilterBar — 추천 하드필터(지역/참가비) 선택 UI (S5).
  * 칩 2개 → 큰 옵션 시트(모달). 시니어 UX: 옵션당 56px 행, 현재 선택 ✓ 표시, 옵션 수 최소화.
  */
+import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
@@ -52,9 +53,7 @@ export function RecoFilterBar({ filter, regions, onChange }: RecoFilterBarProps)
             <View style={styles.sheetHead}>
               <AppText variant="title">{sheet === 'region' ? '지역 선택' : '참가비 선택'}</AppText>
               <Pressable onPress={close} accessibilityRole="button" accessibilityLabel="닫기" style={styles.closeBtn}>
-                <AppText style={styles.closeIcon} color={colors.textMuted}>
-                  ✕
-                </AppText>
+                <Ionicons name="close" size={24} color={colors.textSecondary} />
               </Pressable>
             </View>
 
@@ -132,9 +131,7 @@ function FilterChip({
       >
         {label}
       </AppText>
-      <AppText variant="caption" color={active ? colors.primaryInk : colors.textMuted}>
-        ▾
-      </AppText>
+      <Ionicons name="chevron-down" size={16} color={active ? colors.primaryInk : colors.textMuted} />
     </Pressable>
   );
 }
@@ -150,11 +147,7 @@ function OptionRow({ label, selected, onPress }: { label: string; selected: bool
       <AppText variant="body" weight={selected ? 'bold' : 'regular'} color={selected ? colors.primaryInk : colors.textPrimary}>
         {label}
       </AppText>
-      {selected && (
-        <AppText variant="body" weight="bold" color={colors.primaryInk}>
-          ✓
-        </AppText>
-      )}
+      {selected && <Ionicons name="checkmark" size={22} color={colors.primaryInk} />}
     </Pressable>
   );
 }
@@ -218,10 +211,6 @@ const styles = StyleSheet.create({
     height: MIN_TOUCH_SIZE,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  closeIcon: {
-    fontSize: 22,
-    lineHeight: 26,
   },
   optionScroll: {
     flexGrow: 0,

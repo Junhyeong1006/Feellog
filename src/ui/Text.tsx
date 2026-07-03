@@ -26,6 +26,8 @@ export interface AppTextProps extends RNTextProps {
   weight?: keyof typeof fontWeight;
   /** 가운데 정렬 */
   center?: boolean;
+  /** 고정폭 숫자(가격·카운트·%·날짜 — 정렬 흔들림 방지) */
+  tabular?: boolean;
 }
 
 export function AppText({
@@ -34,6 +36,7 @@ export function AppText({
   muted,
   weight,
   center,
+  tabular,
   style,
   ...rest
 }: AppTextProps) {
@@ -48,6 +51,7 @@ export function AppText({
     color ? { color } : null,
     weight && { fontWeight: fontWeight[weight] },
     center && styles.center,
+    tabular && styles.tabular,
     style,
   ]);
 
@@ -70,5 +74,8 @@ const styles = StyleSheet.create({
   },
   center: {
     textAlign: 'center',
+  },
+  tabular: {
+    fontVariant: ['tabular-nums'],
   },
 });

@@ -125,7 +125,8 @@ export function Button({
 const styles = StyleSheet.create({
   base: {
     minHeight: MIN_TOUCH_SIZE,
-    borderRadius: radius.pill,
+    // 버튼은 16px 라운드(형태 위계: pill은 칩·배지 전용 — 디자인 리서치)
+    borderRadius: radius.lg,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: spacing.xl,

@@ -4,28 +4,44 @@
  */
 import { StyleSheet, View } from 'react-native';
 
-import { colors, fontFamily, radius } from '@/tokens';
+import { BrandMark } from '@/components/BrandMark';
+import { colors, fontFamily, spacing } from '@/tokens';
 
 import { AppText } from './Text';
 
 export interface LogoProps {
   /** 워드마크 크기 */
   size?: number;
-  /** 상단 심볼 원 표시 */
+  /** 심볼(5잎 꽃) 표시 — 세로 스택(스플래시/로그인용) */
   withMark?: boolean;
+  /** 가로 락업(마크+워드마크 한 줄 — 헤더/사이드바용) */
+  lockup?: boolean;
   color?: string;
 }
 
-export function Logo({ size = 40, withMark = false, color = colors.primary }: LogoProps) {
+export function Logo({ size = 40, withMark = false, lockup = false, color = colors.primary }: LogoProps) {
+  const word = (
+    <AppText
+      style={[styles.word, { fontSize: size, lineHeight: Math.round(size * 1.15), color }]}
+      accessibilityRole="header"
+    >
+      Feellog
+    </AppText>
+  );
+
+  if (lockup) {
+    return (
+      <View style={styles.lockup}>
+        <BrandMark size={Math.round(size * 1.15)} />
+        {word}
+      </View>
+    );
+  }
+
   return (
     <View style={styles.wrap}>
-      {withMark && <View style={[styles.mark, { backgroundColor: colors.primaryTint }]} />}
-      <AppText
-        style={[styles.word, { fontSize: size, lineHeight: size * 1.1, color }]}
-        accessibilityRole="header"
-      >
-        Feellog
-      </AppText>
+      {withMark && <BrandMark size={Math.max(64, size * 1.6)} />}
+      {word}
     </View>
   );
 }
@@ -33,12 +49,12 @@ export function Logo({ size = 40, withMark = false, color = colors.primary }: Lo
 const styles = StyleSheet.create({
   wrap: {
     alignItems: 'center',
-    gap: 12,
+    gap: spacing.md,
   },
-  mark: {
-    width: 88,
-    height: 88,
-    borderRadius: radius.pill,
+  lockup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
   },
   word: {
     fontFamily: fontFamily.logo,

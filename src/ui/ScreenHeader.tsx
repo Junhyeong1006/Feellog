@@ -2,6 +2,7 @@
  * ScreenHeader — 상단 바(뒤로가기 + 제목 + 우측 슬롯).
  * 뒤로 갈 곳이 없으면 홈으로 대체 이동. 시니어 터치 영역 확보.
  */
+import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
 
@@ -35,7 +36,7 @@ export function ScreenHeader({ title, hideBack = false, onBack, right }: ScreenH
             hitSlop={10}
             style={styles.backBtn}
           >
-            <AppText style={styles.backIcon}>←</AppText>
+            <Ionicons name="chevron-back" size={28} color={colors.textPrimary} />
           </Pressable>
         )}
       </View>
@@ -76,10 +77,5 @@ const styles = StyleSheet.create({
     height: 48,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  backIcon: {
-    fontSize: 26,
-    lineHeight: 30,
-    color: colors.textPrimary,
   },
 });

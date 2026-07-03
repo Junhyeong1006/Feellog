@@ -16,36 +16,33 @@ import {
   type NativeSyntheticEvent,
 } from 'react-native';
 
+import { SpotIllustration, type SpotKind } from '@/components/EmptyState';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
 import { setOnboardingSeen } from '@/state/appFlags';
-import { colors, CONTENT_WIDTH, MAX_CONTENT_WIDTH, palette, radius, spacing } from '@/tokens';
+import { CONTENT_WIDTH, MAX_CONTENT_WIDTH, spacing } from '@/tokens';
 import { AppText, Button, Card, Dots, Screen } from '@/ui';
 
 interface Slide {
-  emoji: string;
-  accent: string;
+  spot: SpotKind;
   title: string;
   body: string;
 }
 
 const SLIDES: Slide[] = [
   {
-    emoji: '🌱',
-    accent: colors.primaryTint,
-    title: '새로운 즐거움,\nFeellog와 함께',
-    body: '취미를 찾고, 기록하고, 나누는 공간이에요',
+    spot: 'compass',
+    title: '나에게 맞는 취미,\n찾아드릴게요',
+    body: '12개의 장면으로 성향을 알아보고 딱 맞는 활동을 추천해요',
   },
   {
-    emoji: '🤝',
-    accent: palette.mint,
+    spot: 'chat',
     title: '함께 나누는 즐거움,\n취향 공동체',
-    body: '정성스럽게 만든 결과물을 함께 소통하며 공유해보세요',
+    body: '같은 취향의 이웃들과 이야기를 나눠보세요',
   },
   {
-    emoji: '📖',
-    accent: palette.coralTint,
-    title: '나만의 속도로\n즐기는 기록',
-    body: '차곡차곡 나만의 추억을 만들어요',
+    spot: 'heart',
+    title: '좋아요 할수록\n더 잘 맞는 추천',
+    body: '마음에 드는 활동에 좋아요를 남기면 추천이 똑똑해져요',
   },
 ];
 
@@ -106,15 +103,7 @@ export default function OnboardingScreen() {
         <View style={styles.deskRow}>
           {SLIDES.map((slide, i) => (
             <Card key={i} padding="xl" elevation="soft" style={styles.deskCard}>
-              <View style={[styles.illust, styles.deskIllust, { backgroundColor: slide.accent }]}>
-                <AppText
-                  style={styles.deskEmoji}
-                  accessibilityElementsHidden
-                  importantForAccessibility="no-hide-descendants"
-                >
-                  {slide.emoji}
-                </AppText>
-              </View>
+              <SpotIllustration kind={slide.spot} size={120} />
               <AppText variant="title" center style={styles.title}>
                 {slide.title}
               </AppText>
@@ -173,15 +162,7 @@ export default function OnboardingScreen() {
         >
           {SLIDES.map((slide, i) => (
             <View key={i} style={[styles.slide, { width: pageWidth }]}>
-              <View style={[styles.illust, { backgroundColor: slide.accent }]}>
-                <AppText
-                  style={styles.emoji}
-                  accessibilityElementsHidden
-                  importantForAccessibility="no-hide-descendants"
-                >
-                  {slide.emoji}
-                </AppText>
-              </View>
+              <SpotIllustration kind={slide.spot} size={180} />
               <View style={styles.copy}>
                 <AppText variant="h2" center style={styles.title}>
                   {slide.title}
@@ -221,17 +202,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
     gap: spacing.xxl,
   },
-  illust: {
-    width: 220,
-    height: 220,
-    borderRadius: radius.xxl,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  emoji: {
-    fontSize: 96,
-    lineHeight: 108,
-  },
   copy: {
     gap: spacing.md,
     alignItems: 'center',
@@ -267,14 +237,6 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     gap: spacing.base,
-  },
-  deskIllust: {
-    width: 140,
-    height: 140,
-  },
-  deskEmoji: {
-    fontSize: 64,
-    lineHeight: 76,
   },
   deskStart: {
     alignSelf: 'center',

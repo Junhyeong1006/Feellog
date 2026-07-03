@@ -5,6 +5,7 @@
  * 하단 문구로 약관/개인정보 동의를 고지하고 전문 링크를 제공.
  * 데스크탑: [브랜드 패널 | 로그인 카드] 스플릿 레이아웃.
  */
+import { Ionicons } from '@expo/vector-icons';
 import { Link, router } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -14,7 +15,7 @@ import { ENABLED_PROVIDERS } from '@/config/auth';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
 import { track } from '@/lib/analytics';
 import { useAuth } from '@/providers/AuthProvider';
-import { colors, radius, spacing } from '@/tokens';
+import { colors, palette, radius, spacing } from '@/tokens';
 import { AppText, Button, Logo, Screen, type ButtonVariant } from '@/ui';
 
 type Pending = OAuthProvider | 'guest' | null;
@@ -26,9 +27,9 @@ const PROVIDER_BUTTON: Record<OAuthProvider, { label: string; variant: ButtonVar
 };
 
 const FEATURES = [
-  { emoji: '🧭', text: '12개의 장면으로 알아보는 나의 여가 성향' },
-  { emoji: '✨', text: '취향에 꼭 맞는 활동을 한 장씩 추천' },
-  { emoji: '🤝', text: '같은 취향 이웃들과 나누는 취미 이야기' },
+  { icon: 'compass-outline', tint: palette.blueTint, ink: colors.primaryInk, text: '12개의 장면으로 알아보는 나의 여가 성향' },
+  { icon: 'sparkles-outline', tint: palette.mint, ink: colors.mintInk, text: '취향에 꼭 맞는 활동을 한 장씩 추천' },
+  { icon: 'chatbubbles-outline', tint: palette.coralTint, ink: colors.coralInk, text: '같은 취향 이웃들과 나누는 취미 이야기' },
 ] as const;
 
 export default function LoginScreen() {
@@ -127,14 +128,10 @@ export default function LoginScreen() {
             </AppText>
             <View style={styles.features}>
               {FEATURES.map((f) => (
-                <View key={f.emoji} style={styles.featureRow}>
-                  <AppText
-                    style={styles.featureEmoji}
-                    accessibilityElementsHidden
-                    importantForAccessibility="no-hide-descendants"
-                  >
-                    {f.emoji}
-                  </AppText>
+                <View key={f.icon} style={styles.featureRow}>
+                  <View style={[styles.featureIcon, { backgroundColor: f.tint }]}>
+                    <Ionicons name={f.icon} size={22} color={f.ink} />
+                  </View>
                   <AppText variant="body" muted style={styles.featureText}>
                     {f.text}
                   </AppText>
@@ -242,9 +239,12 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.base,
   },
-  featureEmoji: {
-    fontSize: 26,
-    lineHeight: 32,
+  featureIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 14, // 스쿼클(정원 금지)
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   featureText: {
     flex: 1,

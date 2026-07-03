@@ -3,6 +3,7 @@
  * 로고 → 메뉴 4개(홈·추천·커뮤니티·마이) → 하단 사용자/로그인 영역.
  * (tabs)/_layout.tsx에서 isDesktop일 때만 렌더된다.
  */
+import { Ionicons } from '@expo/vector-icons';
 import { usePathname, useRouter, type Href } from 'expo-router';
 import { Pressable, StyleSheet, View, type PressableStateCallbackType } from 'react-native';
 import { Image } from 'expo-image';
@@ -20,15 +21,15 @@ import { AppText, Button, Logo } from '@/ui';
 interface NavDef {
   href: Href;
   path: string;
-  emoji: string;
+  icon: 'home' | 'sparkles' | 'chatbubbles' | 'person';
   label: string;
 }
 
 const NAV_ITEMS: NavDef[] = [
-  { href: '/home', path: '/home', emoji: '🏠', label: '홈' },
-  { href: '/reco', path: '/reco', emoji: '✨', label: '추천' },
-  { href: '/community', path: '/community', emoji: '💬', label: '커뮤니티' },
-  { href: '/my', path: '/my', emoji: '🙂', label: '마이' },
+  { href: '/home', path: '/home', icon: 'home', label: '홈' },
+  { href: '/reco', path: '/reco', icon: 'sparkles', label: '추천' },
+  { href: '/community', path: '/community', icon: 'chatbubbles', label: '커뮤니티' },
+  { href: '/my', path: '/my', icon: 'person', label: '마이' },
 ];
 
 function NavItem({ item, active, onPress }: { item: NavDef; active: boolean; onPress: () => void }) {
@@ -49,11 +50,13 @@ function NavItem({ item, active, onPress }: { item: NavDef; active: boolean; onP
         ];
       }}
     >
-      {/* 활성 표시는 색+굵기+좌측 바 삼중 신호(색맹/저시력 대응) */}
+      {/* 활성 표시는 색+굵기+채움+좌측 바 다중 신호(색맹/저시력 대응) */}
       {active && <View style={styles.activeBar} />}
-      <AppText style={styles.navEmoji} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-        {item.emoji}
-      </AppText>
+      <Ionicons
+        name={active ? item.icon : (`${item.icon}-outline` as const)}
+        size={24}
+        color={active ? colors.primaryInk : colors.textSecondary}
+      />
       <AppText
         variant="body"
         weight={active ? 'bold' : 'semibold'}
@@ -76,7 +79,7 @@ export function Sidebar() {
   return (
     <View style={styles.root}>
       <View style={styles.logoWrap}>
-        <Logo size={30} />
+        <Logo size={26} lockup />
         <AppText variant="caption" muted>
           나에게 맞는 취미 찾기
         </AppText>
@@ -105,7 +108,7 @@ export function Sidebar() {
               <Image source={{ uri: profile.avatar_url }} style={styles.avatar} contentFit="cover" />
             ) : (
               <View style={styles.avatarFallback}>
-                <AppText style={styles.avatarEmoji}>🙂</AppText>
+                <Ionicons name="person" size={20} color={colors.primaryInk} />
               </View>
             )}
             <View style={styles.userInfo}>
@@ -174,10 +177,6 @@ const styles = StyleSheet.create({
     borderRadius: 2,
     backgroundColor: colors.primary,
   },
-  navEmoji: {
-    fontSize: 22,
-    lineHeight: 28,
-  },
   bottom: {
     gap: spacing.sm,
   },
@@ -204,10 +203,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primaryTint,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  avatarEmoji: {
-    fontSize: 22,
-    lineHeight: 28,
   },
   userInfo: {
     flex: 1,

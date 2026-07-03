@@ -29,18 +29,21 @@ export interface BadgeProps {
   label: string;
   tone?: BadgeTone;
   size?: BadgeSize;
+  /** square=8px 라운드 사각(키워드 태그) · pill=캡슐(상태/매칭 배지, 기본) */
+  shape?: 'pill' | 'square';
   /** 라벨 왼쪽 슬롯(아이콘/점) */
   leftSlot?: React.ReactNode;
   style?: StyleProp<ViewStyle>;
 }
 
-export function Badge({ label, tone = 'primary', size = 'md', leftSlot, style }: BadgeProps) {
+export function Badge({ label, tone = 'primary', size = 'md', shape = 'pill', leftSlot, style }: BadgeProps) {
   const t = TONES[tone];
   return (
     <View
       style={[
         styles.badge,
         size === 'sm' ? styles.sm : styles.md,
+        shape === 'square' && styles.square,
         { backgroundColor: t.bg },
         style,
       ]}
@@ -60,6 +63,9 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
     gap: spacing.xs,
     borderRadius: radius.pill,
+  },
+  square: {
+    borderRadius: radius.sm,
   },
   sm: {
     paddingHorizontal: spacing.sm,

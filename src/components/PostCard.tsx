@@ -3,17 +3,31 @@
  * (사진글) 카테고리 이모지 밴드 + 좋아요/댓글 수. 좋아요는 부모가 제어.
  * onDelete가 있으면 본인 글 → 인라인 확인 후 삭제.
  */
+import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import type { Post } from '@/api/community';
 import { TYPE_META } from '@/core';
-import { colors, radius, spacing } from '@/tokens';
+import { colors, palette, radius, spacing } from '@/tokens';
 import { AppText, Badge, Card } from '@/ui';
 
-import { categoryVisual } from './categoryVisual';
-import { CategoryImage } from './CategoryImage';
+import { CategoryBand } from './CategoryBand';
+
+/** 아바타 폴백 색: 이름 해시로 결정적 배정(틴트 bg + 잉크 fg) */
+const AVATAR_TONES = [
+  { bg: palette.blueTint, fg: colors.primaryInk },
+  { bg: palette.mint, fg: colors.mintInk },
+  { bg: palette.coralTint, fg: colors.coralInk },
+  { bg: palette.cream2, fg: palette.gray600 },
+] as const;
+
+function avatarTone(name: string) {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) | 0;
+  return AVATAR_TONES[Math.abs(h) % AVATAR_TONES.length];
+}
 
 export interface PostCardProps {
   post: Post;
@@ -26,18 +40,18 @@ export interface PostCardProps {
 }
 
 export function PostCard({ post, liked, likeCount, onToggleLike, onDelete, onOpen }: PostCardProps) {
-  const visual = categoryVisual(post.category);
   const typeLabel = post.authorType ? TYPE_META[post.authorType].label : null;
+  const tone = avatarTone(post.authorName);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   return (
     <Card padding="lg" elevation="soft">
       <View style={styles.authorRow}>
-        <View style={styles.avatar}>
+        <View style={[styles.avatar, { backgroundColor: tone.bg }]}>
           {post.authorAvatarUrl ? (
             <Image source={{ uri: post.authorAvatarUrl }} style={styles.avatarImg} contentFit="cover" />
           ) : (
-            <AppText variant="body" weight="bold" color={colors.primaryInk}>
+            <AppText variant="body" weight="bold" color={tone.fg}>
               {post.authorName.charAt(0)}
             </AppText>
           )}
@@ -66,8 +80,8 @@ export function PostCard({ post, liked, likeCount, onToggleLike, onDelete, onOpe
       )}
 
       {post.hasPhoto && (
-        <View style={[styles.photo, { backgroundColor: visual.accent }]}>
-          <CategoryImage uri={post.imageUrl} emoji={visual.emoji} emojiSize={60} />
+        <View style={styles.photo}>
+          <CategoryBand imageUrl={post.imageUrl} category={post.category} height={168} glyphSize={28} />
         </View>
       )}
 
@@ -80,8 +94,12 @@ export function PostCard({ post, liked, likeCount, onToggleLike, onDelete, onOpe
           hitSlop={8}
           style={styles.footerBtn}
         >
-          <AppText style={styles.footerIcon}>{liked ? '❤️' : '🤍'}</AppText>
-          <AppText variant="body" color={liked ? colors.coralInk : colors.textSecondary} weight="semibold">
+          <Ionicons
+            name={liked ? 'heart' : 'heart-outline'}
+            size={22}
+            color={liked ? colors.coralInk : colors.textSecondary}
+          />
+          <AppText variant="body" color={liked ? colors.coralInk : colors.textSecondary} weight="semibold" tabular>
             {likeCount}
           </AppText>
         </Pressable>
@@ -94,15 +112,15 @@ export function PostCard({ post, liked, likeCount, onToggleLike, onDelete, onOpe
             hitSlop={8}
             style={styles.footerBtn}
           >
-            <AppText style={styles.footerIcon}>💬</AppText>
-            <AppText variant="body" muted weight="semibold">
+            <Ionicons name="chatbubble-outline" size={21} color={colors.textSecondary} />
+            <AppText variant="body" muted weight="semibold" tabular>
               {post.commentCount}
             </AppText>
           </Pressable>
         ) : (
           <View style={styles.footerBtn}>
-            <AppText style={styles.footerIcon}>💬</AppText>
-            <AppText variant="body" muted weight="semibold">
+            <Ionicons name="chatbubble-outline" size={21} color={colors.textSecondary} />
+            <AppText variant="body" muted weight="semibold" tabular>
               {post.commentCount}
             </AppText>
           </View>
@@ -163,7 +181,6 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: radius.pill,
-    backgroundColor: colors.primaryTint,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
@@ -181,20 +198,9 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
   },
   photo: {
-    height: 160,
     borderRadius: radius.lg,
-    alignItems: 'center',
-    justifyContent: 'center',
     marginTop: spacing.md,
     overflow: 'hidden',
-  },
-  photoImg: {
-    width: '100%',
-    height: '100%',
-  },
-  photoEmoji: {
-    fontSize: 60,
-    lineHeight: 70,
   },
   footer: {
     flexDirection: 'row',
@@ -207,10 +213,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.xs,
     minHeight: 44,
-  },
-  footerIcon: {
-    fontSize: 20,
-    lineHeight: 24,
   },
   deleteBtn: {
     marginLeft: 'auto',

@@ -1,8 +1,10 @@
 /**
  * ActivityCard — 추천 피드의 활동 카드.
- * 상단 이미지 밴드(이미지 없으면 카테고리 이모지) + 매칭% 배지 + 제목/요약/키워드/메타.
+ * 상단 카테고리 밴드(이미지 없으면 고스트 글리프 밴드) + 매칭% 배지 + 제목/요약/태그/메타.
+ * 메타는 Ionicons(위치/시간/가격), 태그는 8px 사각(#접두어 없음 — 형태 위계).
  * onPressDetail을 주면 카드 전체가 상세로 이동한다.
  */
+import { Ionicons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import type { AppActivity } from '@/api/activities';
@@ -10,8 +12,7 @@ import { colors, radius, shadows, spacing } from '@/tokens';
 import { AppText, Badge } from '@/ui';
 import { formatDuration, formatPrice, formatRegion } from '@/utils/format';
 
-import { categoryVisual } from './categoryVisual';
-import { CategoryImage } from './CategoryImage';
+import { CategoryBand } from './CategoryBand';
 
 export interface ActivityCardProps {
   activity: AppActivity;
@@ -22,14 +23,24 @@ export interface ActivityCardProps {
   bandHeight?: number;
 }
 
-export function ActivityCard({ activity, score, onPressDetail, bandHeight = 150 }: ActivityCardProps) {
-  const visual = categoryVisual(activity.category);
+function Meta({ icon, label }: { icon: keyof typeof Ionicons.glyphMap; label: string }) {
+  return (
+    <View style={styles.metaItem}>
+      <Ionicons name={icon} size={16} color={colors.textMuted} />
+      <AppText variant="caption" muted tabular>
+        {label}
+      </AppText>
+    </View>
+  );
+}
+
+export function ActivityCard({ activity, score, onPressDetail, bandHeight = 132 }: ActivityCardProps) {
   const region = formatRegion(activity.regionSido, activity.regionSigungu);
 
   const body = (
     <>
-      <View style={[styles.band, { height: bandHeight, backgroundColor: visual.accent }]}>
-        <CategoryImage uri={activity.imageUrl} emoji={visual.emoji} emojiSize={68} />
+      <View>
+        <CategoryBand imageUrl={activity.imageUrl} category={activity.category} height={bandHeight} />
         {score != null && (
           <View style={styles.badgeOverlay}>
             <Badge label={`${score}% 잘 맞아요`} tone="mint" />
@@ -50,27 +61,24 @@ export function ActivityCard({ activity, score, onPressDetail, bandHeight = 150 
         {activity.keywords.length > 0 && (
           <View style={styles.chips}>
             {activity.keywords.slice(0, 4).map((k) => (
-              <Badge key={k} label={`#${k}`} tone="neutral" size="sm" />
+              <Badge key={k} label={k} tone="neutral" size="sm" shape="square" />
             ))}
           </View>
         )}
 
         <View style={styles.metaRow}>
-          <AppText variant="caption" muted>
-            📍 {region}
-          </AppText>
-          <AppText variant="caption" muted>
-            ⏱ {formatDuration(activity.durationMin)}
-          </AppText>
-          <AppText variant="caption" muted>
-            💳 {formatPrice(activity.price)}
-          </AppText>
+          <Meta icon="location-outline" label={region} />
+          <Meta icon="time-outline" label={formatDuration(activity.durationMin)} />
+          <Meta icon="cash-outline" label={formatPrice(activity.price)} />
         </View>
 
         {onPressDetail != null && (
-          <AppText variant="body" weight="semibold" color={colors.primaryInk} style={styles.detailLink}>
-            상세보기 ›
-          </AppText>
+          <View style={styles.detailLink}>
+            <AppText variant="body" weight="semibold" color={colors.primaryInk}>
+              자세히 보기
+            </AppText>
+            <Ionicons name="chevron-forward" size={18} color={colors.primaryInk} />
+          </View>
         )}
       </View>
     </>
@@ -81,7 +89,7 @@ export function ActivityCard({ activity, score, onPressDetail, bandHeight = 150 
       <Pressable
         onPress={onPressDetail}
         accessibilityRole="button"
-        accessibilityLabel={`${activity.title} 상세보기`}
+        accessibilityLabel={`${activity.title} 자세히 보기`}
         style={({ pressed }) => [styles.card, pressed && styles.pressed]}
       >
         {body}
@@ -104,22 +112,10 @@ const styles = StyleSheet.create({
     opacity: 0.97,
     transform: [{ scale: 0.995 }],
   },
-  band: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  image: {
-    width: '100%',
-    height: '100%',
-  },
-  emoji: {
-    fontSize: 68,
-    lineHeight: 78,
-  },
   badgeOverlay: {
     position: 'absolute',
     top: spacing.md,
-    left: spacing.md,
+    right: spacing.md,
   },
   content: {
     padding: spacing.lg,
@@ -131,16 +127,24 @@ const styles = StyleSheet.create({
   chips: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: spacing.xs,
+    gap: spacing.xs + 2,
     marginTop: spacing.xs,
   },
   metaRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: spacing.md,
+    gap: spacing.base,
     marginTop: spacing.xs,
   },
+  metaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
   detailLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
     marginTop: spacing.sm,
   },
 });

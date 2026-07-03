@@ -7,18 +7,27 @@
  * 게이트: 부팅 디사이더(index)만으로는 딥링크(/home 직접 진입)를 못 막으므로
  * 여기서도 로그인/게스트·필수 동의를 검사한다(정적 export는 모든 라우트가 직접 진입 가능).
  */
+import { Ionicons } from '@expo/vector-icons';
 import { Redirect, Tabs } from 'expo-router';
-import { ActivityIndicator, Platform, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Platform, StyleSheet, View, type ColorValue } from 'react-native';
 
 import { Sidebar } from '@/components/Sidebar';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
 import { useAuth } from '@/providers/AuthProvider';
 import { useFontScale } from '@/providers/FontScaleProvider';
 import { colors, fontFamily } from '@/tokens';
-import { AppText } from '@/ui';
 
-function TabIcon({ emoji, focused }: { emoji: string; focused: boolean }) {
-  return <AppText style={[styles.icon, focused && styles.iconFocused]}>{emoji}</AppText>;
+/** 활성=filled / 비활성=outline 스왑(색 변화 + 형태 변화 이중 신호 — 저시력 대응) */
+function TabIcon({
+  name,
+  focused,
+  color,
+}: {
+  name: 'home' | 'sparkles' | 'chatbubbles' | 'person';
+  focused: boolean;
+  color: ColorValue;
+}) {
+  return <Ionicons name={focused ? name : (`${name}-outline` as const)} size={26} color={color} />;
 }
 
 export default function TabsLayout() {
@@ -57,22 +66,31 @@ export default function TabsLayout() {
         >
           <Tabs.Screen
             name="home"
-            options={{ title: '홈', tabBarIcon: ({ focused }) => <TabIcon emoji="🏠" focused={focused} /> }}
+            options={{
+              title: '홈',
+              tabBarIcon: ({ focused, color }) => <TabIcon name="home" focused={focused} color={color} />,
+            }}
           />
           <Tabs.Screen
             name="reco"
-            options={{ title: '추천', tabBarIcon: ({ focused }) => <TabIcon emoji="✨" focused={focused} /> }}
+            options={{
+              title: '추천',
+              tabBarIcon: ({ focused, color }) => <TabIcon name="sparkles" focused={focused} color={color} />,
+            }}
           />
           <Tabs.Screen
             name="community"
             options={{
               title: '커뮤니티',
-              tabBarIcon: ({ focused }) => <TabIcon emoji="💬" focused={focused} />,
+              tabBarIcon: ({ focused, color }) => <TabIcon name="chatbubbles" focused={focused} color={color} />,
             }}
           />
           <Tabs.Screen
             name="my"
-            options={{ title: '마이', tabBarIcon: ({ focused }) => <TabIcon emoji="🙂" focused={focused} /> }}
+            options={{
+              title: '마이',
+              tabBarIcon: ({ focused, color }) => <TabIcon name="person" focused={focused} color={color} />,
+            }}
           />
         </Tabs>
       </View>
@@ -110,12 +128,5 @@ const styles = StyleSheet.create({
     // fontSize는 위에서 폰트스케일 반영(기본 15 — 캡션 하한 준수)
     fontWeight: '600',
     marginBottom: Platform.OS === 'web' ? 6 : 2,
-  },
-  icon: {
-    fontSize: 22,
-    lineHeight: 26,
-  },
-  iconFocused: {
-    transform: [{ scale: 1.12 }],
   },
 });

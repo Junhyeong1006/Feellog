@@ -7,19 +7,22 @@ import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
+import { Ionicons } from '@expo/vector-icons';
+
+import { BrandMark } from '@/components/BrandMark';
 import { QUESTIONS } from '@/core';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
 import { track } from '@/lib/analytics';
 import { useAuth } from '@/providers/AuthProvider';
 import { answeredCount, clearTestProgress, getTestProgress } from '@/state/testProgress';
-import { colors, CONTENT_WIDTH, radius, spacing } from '@/tokens';
+import { colors, CONTENT_WIDTH, palette, spacing } from '@/tokens';
 import { AppText, Button, Card, Screen } from '@/ui';
 
 const POINTS = [
-  { emoji: '🖼️', title: '두 장면 중 끌리는 쪽', body: `${QUESTIONS.length}개의 장면을 비교하며 골라요` },
-  { emoji: '⏱️', title: '약 2분이면 충분해요', body: '천천히 편하게 고르셔도 괜찮아요' },
-  { emoji: '🎯', title: '나의 여가 유형', body: '유형과 어울리는 활동을 추천해드려요' },
-];
+  { icon: 'images-outline', tint: palette.blueTint, ink: colors.primaryInk, title: '두 장면 중 끌리는 쪽', body: `${QUESTIONS.length}개의 장면을 비교하며 골라요` },
+  { icon: 'time-outline', tint: palette.mint, ink: colors.mintInk, title: '약 2분이면 충분해요', body: '천천히 편하게 고르셔도 괜찮아요' },
+  { icon: 'flag-outline', tint: palette.coralTint, ink: colors.coralInk, title: '나의 여가 유형', body: '유형과 어울리는 활동을 추천해드려요' },
+] as const;
 
 export default function TestIntroScreen() {
   const { session, guest } = useAuth();
@@ -69,9 +72,7 @@ export default function TestIntroScreen() {
       footer={isDesktop ? undefined : <View style={styles.footerCol}>{startButtons}</View>}
     >
       <View style={styles.hero}>
-        <View style={styles.badge}>
-          <AppText style={styles.badgeEmoji}>🧭</AppText>
-        </View>
+        <BrandMark size={72} />
         <AppText variant="h1" center style={styles.title}>
           나의 여가 성향{'\n'}알아보기
         </AppText>
@@ -88,7 +89,9 @@ export default function TestIntroScreen() {
             elevation="soft"
             style={isDesktop ? styles.pointCardDesk : styles.pointCard}
           >
-            <AppText style={styles.pointEmoji}>{p.emoji}</AppText>
+            <View style={[styles.pointIcon, { backgroundColor: p.tint }]}>
+              <Ionicons name={p.icon} size={22} color={p.ink} />
+            </View>
             <View style={isDesktop ? styles.pointTextDesk : styles.pointText}>
               <AppText variant="title" center={isDesktop}>
                 {p.title}
@@ -122,18 +125,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.base,
     paddingTop: spacing.lg,
-  },
-  badge: {
-    width: 96,
-    height: 96,
-    borderRadius: radius.pill,
-    backgroundColor: colors.primaryTint,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  badgeEmoji: {
-    fontSize: 52,
-    lineHeight: 60,
   },
   title: {
     lineHeight: 42,
@@ -171,9 +162,12 @@ const styles = StyleSheet.create({
   footerCol: {
     gap: spacing.xs,
   },
-  pointEmoji: {
-    fontSize: 34,
-    lineHeight: 40,
+  pointIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 14, // 스쿼클
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   pointText: {
     flex: 1,

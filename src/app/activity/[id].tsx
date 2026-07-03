@@ -7,9 +7,10 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Linking, ScrollView, StyleSheet, View } from 'react-native';
 
+import { Ionicons } from '@expo/vector-icons';
+
 import { fetchActivity, type AppActivity } from '@/api/activities';
-import { categoryVisual } from '@/components/categoryVisual';
-import { CategoryImage } from '@/components/CategoryImage';
+import { CategoryBand } from '@/components/CategoryBand';
 import { matchScore } from '@/core';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
 import { track } from '@/lib/analytics';
@@ -78,7 +79,6 @@ export default function ActivityDetailScreen() {
     );
   }
 
-  const visual = categoryVisual(activity.category);
   const score = taste ? matchScore(taste.vector, activity.vector) : null;
   const region = formatRegion(activity.regionSido, activity.regionSigungu);
   const mapQuery = `${activity.partnerName ?? activity.title} ${activity.regionSigungu ?? activity.regionSido ?? ''}`.trim();
@@ -101,8 +101,13 @@ export default function ActivityDetailScreen() {
   };
 
   const hero = (
-    <View style={[styles.band, isDesktop && styles.bandDesk, { backgroundColor: visual.accent }]}>
-      <CategoryImage uri={activity.imageUrl} emoji={visual.emoji} emojiSize={84} />
+    <View style={[styles.band, isDesktop && styles.bandDesk]}>
+      <CategoryBand
+        imageUrl={activity.imageUrl}
+        category={activity.category}
+        height={isDesktop ? 300 : 200}
+        glyphSize={40}
+      />
       {score != null && (
         <View style={styles.badgeOverlay}>
           <Badge label={`${score}% 잘 맞아요 · 취향 매칭`} tone="mint" />
@@ -149,10 +154,12 @@ export default function ActivityDetailScreen() {
     <View style={styles.section}>
       <AppText variant="title">위치</AppText>
       <Card padding="lg" elevation="soft" style={styles.mapCard}>
-        <AppText style={styles.mapPin}>📍</AppText>
-        <AppText variant="body" weight="semibold" center>
-          {region}
-        </AppText>
+        <View style={styles.mapRow}>
+          <Ionicons name="location-outline" size={22} color={colors.primaryInk} />
+          <AppText variant="body" weight="semibold">
+            {region}
+          </AppText>
+        </View>
         <Button
           label="카카오맵에서 보기"
           variant="secondary"
@@ -254,23 +261,10 @@ const styles = StyleSheet.create({
     paddingTop: spacing.sm,
     gap: spacing.xl,
   },
-  band: {
-    height: 200,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  band: {},
   bandDesk: {
-    height: 300,
     borderRadius: radius.xl,
     overflow: 'hidden',
-  },
-  image: {
-    width: '100%',
-    height: '100%',
-  },
-  emoji: {
-    fontSize: 84,
-    lineHeight: 96,
   },
   badgeOverlay: {
     position: 'absolute',
@@ -331,13 +325,12 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
   },
   mapCard: {
+    gap: spacing.sm,
+  },
+  mapRow: {
+    flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    paddingVertical: spacing.xl,
-  },
-  mapPin: {
-    fontSize: 32,
-    lineHeight: 38,
   },
   mapBtn: {
     alignSelf: 'stretch',

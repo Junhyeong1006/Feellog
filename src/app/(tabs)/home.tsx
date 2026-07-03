@@ -2,18 +2,27 @@
  * 홈 탭 — 대시보드. 인사 + 나의 여가 유형 + 오늘의 추천 미리보기 + 바로가기.
  * 데스크탑: [유형 카드 | 추천 미리보기] 2컬럼 대시보드.
  */
+import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 
 import { displayNameOf } from '@/api/profiles';
 import { ActivityListItem } from '@/components/ActivityListItem';
+import { BrandMark } from '@/components/BrandMark';
 import { SUB_TRAIT_META, TYPE_META } from '@/core';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
 import { useRecommendations } from '@/hooks/useRecommendations';
 import { useTaste } from '@/hooks/useTaste';
 import { useAuth } from '@/providers/AuthProvider';
-import { colors, CONTENT_WIDTH, radius, spacing } from '@/tokens';
-import { AppText, Badge, Button, Card, Divider, Logo, Screen } from '@/ui';
+import { colors, CONTENT_WIDTH, spacing } from '@/tokens';
+import { AppText, Badge, Button, Card, Divider, Screen } from '@/ui';
+
+/** '7월 3일 목요일' — 홈 아이브로용 날짜 라벨 */
+function todayLabel(): string {
+  const now = new Date();
+  const day = ['일', '월', '화', '수', '목', '금', '토'][now.getDay()];
+  return `${now.getMonth() + 1}월 ${now.getDate()}일 ${day}요일`;
+}
 
 export default function HomeScreen() {
   const { profile, session, guest } = useAuth();
@@ -41,14 +50,10 @@ export default function HomeScreen() {
     </Card>
   ) : (
     <Card padding="xl" style={styles.typeCard}>
-      <View style={styles.testIcon}>
-        <AppText style={styles.testEmoji}>🧭</AppText>
-      </View>
-      <AppText variant="h2" center>
-        성향 테스트로 시작해요
-      </AppText>
-      <AppText variant="body" muted center style={styles.typeTagline}>
-        12개의 장면을 고르면 나에게 맞는 취미를 찾아드려요
+      <BrandMark size={56} />
+      <AppText variant="h2">성향 테스트로 시작해요</AppText>
+      <AppText variant="body" muted style={styles.typeTagline}>
+        12개의 장면을 고르면{'\n'}나에게 맞는 취미를 찾아드려요
       </AppText>
       <Button label="성향 테스트 하기" onPress={() => router.push('/test')} style={styles.typeBtn} />
     </Card>
@@ -58,7 +63,18 @@ export default function HomeScreen() {
     <View style={styles.section}>
       <View style={styles.sectionHead}>
         <AppText variant="title">이런 활동 어때요?</AppText>
-        <Button label="더 보기" variant="ghost" size="md" fullWidth={false} onPress={() => router.push('/reco')} />
+        <Pressable
+          onPress={() => router.push('/reco')}
+          accessibilityRole="button"
+          accessibilityLabel="추천 전체보기"
+          hitSlop={10}
+          style={({ pressed }) => [styles.seeAll, pressed && styles.seeAllPressed]}
+        >
+          <AppText variant="body" weight="semibold" color={colors.primaryInk}>
+            전체보기
+          </AppText>
+          <Ionicons name="chevron-forward" size={18} color={colors.primaryInk} />
+        </Pressable>
       </View>
 
       <Card padding="lg" elevation="soft">
@@ -93,18 +109,14 @@ export default function HomeScreen() {
       maxWidth={isDesktop ? CONTENT_WIDTH.dashboard : undefined}
       contentStyle={styles.content}
     >
+      {/* 에디토리얼 헤더: 아이브로(날짜) + 좌정렬 볼드 인사 — 로고는 로그인/사이드바 전용 */}
       <View style={styles.header}>
-        {/* 데스크탑은 사이드바에 로고가 있으므로 인사만 크게 */}
-        {isDesktop ? (
-          <AppText variant="h2">안녕하세요, {greetName}</AppText>
-        ) : (
-          <>
-            <Logo size={26} />
-            <AppText variant="body" muted>
-              안녕하세요, {greetName}
-            </AppText>
-          </>
-        )}
+        <AppText variant="caption" muted>
+          {todayLabel()}
+        </AppText>
+        <AppText variant="h1" style={styles.greeting}>
+          {greetName},{'\n'}오늘은 뭘 해볼까요?
+        </AppText>
       </View>
 
       {isDesktop ? (
@@ -135,10 +147,11 @@ const styles = StyleSheet.create({
     gap: spacing.xl,
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: spacing.sm,
+    gap: spacing.xs,
+    paddingTop: spacing.sm,
+  },
+  greeting: {
+    lineHeight: 38,
   },
   columns: {
     flexDirection: 'row',
@@ -161,20 +174,6 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
     alignSelf: 'stretch',
   },
-  testIcon: {
-    alignSelf: 'center',
-    width: 80,
-    height: 80,
-    borderRadius: radius.pill,
-    backgroundColor: colors.primaryTint,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.xs,
-  },
-  testEmoji: {
-    fontSize: 42,
-    lineHeight: 50,
-  },
   section: {
     gap: spacing.sm,
   },
@@ -182,6 +181,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    minHeight: 48,
+  },
+  seeAll: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    minHeight: 48,
+    paddingHorizontal: spacing.xs,
+  },
+  seeAllPressed: {
+    opacity: 0.6,
   },
   previewLoading: {
     paddingVertical: spacing.xl,

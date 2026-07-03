@@ -3,6 +3,7 @@
  * 작성자 정보는 서버 트리거가 스냅샷. 로그인 사용자만 진입.
  * 사진은 등록 시점에 압축·업로드(post-images 버킷) 후 공개 URL을 글에 저장.
  */
+import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { Redirect, router } from 'expo-router';
@@ -160,9 +161,12 @@ export default function ComposeScreen() {
               accessibilityLabel="사진 제거"
               style={styles.photoRemove}
             >
-              <AppText variant="caption" weight="bold" color={colors.onPrimary}>
-                ✕ 제거
-              </AppText>
+              <View style={styles.photoRemoveInner}>
+                <Ionicons name="close" size={18} color={colors.onPrimary} />
+                <AppText variant="caption" weight="bold" color={colors.onPrimary}>
+                  제거
+                </AppText>
+              </View>
             </Pressable>
           </View>
         ) : (
@@ -172,9 +176,7 @@ export default function ComposeScreen() {
             accessibilityLabel="사진 추가"
             style={({ pressed }) => [styles.photoAdd, pressed && styles.photoAddPressed]}
           >
-            <AppText style={styles.photoAddIcon} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-              📷
-            </AppText>
+            <Ionicons name="camera-outline" size={24} color={colors.textSecondary} />
             <AppText variant="body" weight="semibold" color={colors.textSecondary}>
               앨범에서 사진 고르기
             </AppText>
@@ -236,10 +238,6 @@ const styles = StyleSheet.create({
   photoAddPressed: {
     opacity: 0.7,
   },
-  photoAddIcon: {
-    fontSize: 24,
-    lineHeight: 30,
-  },
   photoWrap: {
     borderRadius: radius.lg,
     overflow: 'hidden',
@@ -247,6 +245,11 @@ const styles = StyleSheet.create({
   photoPreview: {
     width: '100%',
     height: 200,
+  },
+  photoRemoveInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
   photoRemove: {
     position: 'absolute',

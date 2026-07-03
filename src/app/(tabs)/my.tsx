@@ -3,6 +3,7 @@
  * 계정삭제는 잊혀질 권리(RPC). 게스트는 로그인 유도.
  * 데스크탑: [프로필 | 활동·설정] 2컬럼.
  */
+import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { useState } from 'react';
@@ -226,9 +227,7 @@ function SettingRow({
       <AppText variant="body" color={danger ? colors.danger : colors.textPrimary}>
         {label}
       </AppText>
-      <AppText style={styles.chevron} color={colors.textMuted}>
-        ›
-      </AppText>
+      <Ionicons name="chevron-forward" size={22} color={colors.textMuted} />
     </Pressable>
   );
 }
@@ -307,10 +306,6 @@ const styles = StyleSheet.create({
   },
   settingPressed: {
     opacity: 0.6,
-  },
-  chevron: {
-    fontSize: 26,
-    lineHeight: 30,
   },
   deleteCard: {
     gap: spacing.sm,
