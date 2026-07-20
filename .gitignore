@@ -55,3 +55,6 @@ backups/
 
 # 문서(로컬 보관, GitHub 미업로드)
 docs/
+
+# Figma에서 불러온 원본(PNG·노드 JSON) — 개편 입력용 로컬 캐시, 미업로드
+figma-export/
