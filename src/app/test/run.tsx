@@ -1,38 +1,72 @@
 /**
- * 성향 테스트 진행 — 한 문항씩 두 장면 비교. 끌리는 쪽을 누르면 다음으로.
- * '비슷해요'는 중립(0). 뒤로가기로 이전 문항 수정 가능. 마지막에 진단→결과로 이동.
- * 로그인 상태면 결과를 저장(taste_profiles/test_responses/onboarded).
- * 데스크탑: 두 장면을 좌우 나란히 비교(기획 의도 그대로).
- * 중도 이탈 대비: 응답을 로컬에 저장하고, 재진입 시 이어서 진행(S2 DoD).
+ * 성향 테스트 진행 (v6 블루 — Figma 50:6668).
+ * 파랑 배경 + 상단 진행바(N/12) + 질문 헤드라인 + 사진 선택 카드 2장(세로 스택).
+ * 카드 선택 = A(-25)/B(+25) 기록 후 다음 문항. 뒤로가기로 이전 문항 수정 가능.
+ * 중도 이탈 대비 응답을 로컬 저장(이어하기), 12문 완료 시 diagnose → 결과로 이동.
  */
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
-import { saveDiagnosis } from '@/api/diagnosis';
-import type { TasteSnapshot } from '@/api/tasteProfiles';
+import { saveInitialPrefs } from '@/api/preferences';
 import { diagnose, QUESTIONS, type Answer, type AnswerValue } from '@/core';
-import { useBreakpoint } from '@/hooks/useBreakpoint';
+import { savePrefsFromTest } from '@/hooks/usePrefs';
 import { track } from '@/lib/analytics';
 import { useAuth } from '@/providers/AuthProvider';
 import { clearTestProgress, getTestProgress, setTestProgress } from '@/state/testProgress';
-import { setLocalTaste } from '@/state/tasteCache';
-import { colors, CONTENT_WIDTH, radius, shadows, spacing } from '@/tokens';
-import { AppText, ProgressBar, Screen, ScreenHeader } from '@/ui';
+import { colors, MIN_TOUCH_SIZE, palette, radius, shadows, spacing } from '@/tokens';
+import { AppText, ProgressBar, Screen } from '@/ui';
+
+import { figmaAssets } from '@/assets/figmaAssets';
 
 const TOTAL = QUESTIONS.length;
 
+/** 스펙 50-6668: 진행바 트랙 흰색 반투명(#FFFFFF@0.2 근사) */
+const TRACK_WHITE = 'rgba(255, 255, 255, 0.25)';
+/** 카드 하단 라벨 가독용 검정 그라데이션 */
+const LABEL_GRADIENT = ['rgba(0,0,0,0)', 'rgba(0,0,0,0.75)'] as const;
+
+const P = figmaAssets.photos;
+/** 카테고리 사진(assets/photos) — figmaAssets에 없는 문항 보충 */
+const CAT = {
+  exhibition: require('../../../assets/photos/category-exhibition.jpg'),
+  pottery: require('../../../assets/photos/category-pottery.jpg'),
+  classic: require('../../../assets/photos/category-classic.jpg'),
+  cooking: require('../../../assets/photos/category-cooking.jpg'),
+  calligraphy: require('../../../assets/photos/category-calligraphy.jpg'),
+  music: require('../../../assets/photos/category-music.jpg'),
+  hiking: require('../../../assets/photos/category-hiking.jpg'),
+  yoga: require('../../../assets/photos/category-yoga.jpg'),
+} as const;
+
+/** 문항 id → [A 이미지, B 이미지] (선택지 의미와 결이 맞게 결정적 매핑) */
+const QUESTION_IMAGES: Record<string, [number, number]> = {
+  Q001: [P.testCalm, P.testActive],
+  Q002: [P.testHealing, P.testActive],
+  Q003: [P.testAlone, P.testTogether],
+  Q004: [P.testCalm, P.testTogether],
+  Q005: [P.testQ5A, P.testQ5B],
+  Q006: [CAT.exhibition, CAT.pottery],
+  Q007: [CAT.classic, CAT.cooking],
+  Q008: [P.testGarden, P.testCraft],
+  Q009: [CAT.calligraphy, CAT.cooking],
+  Q010: [P.testQ10A, P.testQ10B],
+  Q011: [CAT.music, CAT.hiking],
+  Q012: [P.testHealing, CAT.yoga],
+};
+
 export default function TestRunScreen() {
-  const { session, refreshProfile } = useAuth();
-  const { isDesktop } = useBreakpoint();
+  const { session } = useAuth();
   const [idx, setIdx] = useState(0);
   const [values, setValues] = useState<(AnswerValue | null)[]>(() => Array(TOTAL).fill(null));
   /** 저장된 진행분 복원 중(첫 문항 깜빡임 방지) */
   const [restoring, setRestoring] = useState(true);
   const submitting = useRef(false);
 
-  // 이어하기: 저장된 진행분이 있으면 복원(48시간 내, 문항 세트 동일할 때만)
+  // 이어하기: 저장된 진행분 복원(48시간 내, 문항 세트 동일할 때만)
   useEffect(() => {
     let alive = true;
     (async () => {
@@ -50,40 +84,26 @@ export default function TestRunScreen() {
 
   const question = QUESTIONS[idx];
   const selected = values[idx];
-
-  const buildAnswers = (vals: (AnswerValue | null)[]): Answer[] =>
-    QUESTIONS.map((q, i) => ({ q: q.id, value: vals[i] ?? 0 }));
+  const [imgA, imgB] = QUESTION_IMAGES[question.id] ?? [P.testCalm, P.testActive];
 
   const finish = async (finalValues: (AnswerValue | null)[]) => {
     if (submitting.current) return;
     submitting.current = true;
-    const answers = buildAnswers(finalValues);
+    const answers: Answer[] = QUESTIONS.map((q, i) => ({ q: q.id, value: finalValues[i] ?? 0 }));
     const result = diagnose(answers);
     track('test_complete');
 
-    // 로컬 캐시에 항상 저장(게스트/오프라인도 추천·피드백 동작). base=cur로 시작.
-    const snapshot: TasteSnapshot = {
-      vector: result.vector,
-      base: result.vector,
-      mainType: result.mainType,
-      subTrait: result.subTrait,
-      trendScore: result.trendScore,
-      recoveryScore: result.recoveryScore,
-      feedbackCount: 0,
-    };
-    await setLocalTaste(snapshot);
-
-    await clearTestProgress(); // 완료 — 이어하기 진행분 제거
+    // 로컬이 1차 저장소 — 게스트/오프라인도 추천 동작
+    await savePrefsFromTest(result.vector);
 
     try {
-      if (session) {
-        await saveDiagnosis(answers, result);
-        await refreshProfile();
-      }
+      if (session) await saveInitialPrefs(result.vector, result.mainType);
     } catch {
-      // 저장 실패해도 결과는 보여준다(오프라인/게스트 대비)
+      // 서버 저장 실패해도 결과는 보여준다(로컬 우선)
     }
-    router.replace({ pathname: '/result', params: { v: answers.map((a) => a.value).join(',') } });
+
+    await clearTestProgress(); // 완료 — 이어하기 진행분 제거
+    router.replace('/result');
   };
 
   const select = (val: AnswerValue) => {
@@ -100,7 +120,7 @@ export default function TestRunScreen() {
   };
 
   const goBack = () => {
-    if (submitting.current) return; // 제출 중 뒤로가기가 clear된 진행분을 재저장하는 것 방지
+    if (submitting.current) return;
     if (idx > 0) {
       setIdx(idx - 1);
       void setTestProgress(values, idx - 1);
@@ -108,219 +128,195 @@ export default function TestRunScreen() {
     else router.replace('/test');
   };
 
+  const closeTest = () => {
+    if (submitting.current) return;
+    // 진행분은 로컬에 남아 있어 다음에 이어서 할 수 있다
+    router.replace('/test');
+  };
+
   if (restoring) {
     return (
-      <Screen edges={['top', 'bottom']} maxWidth={isDesktop ? CONTENT_WIDTH.wide : undefined}>
+      <Screen background={colors.primaryPressed}>
         <View style={styles.restoring}>
-          <ActivityIndicator color={colors.primary} />
+          <ActivityIndicator color={palette.white} />
         </View>
       </Screen>
     );
   }
 
   return (
-    <Screen edges={['top', 'bottom']} noPadding maxWidth={isDesktop ? CONTENT_WIDTH.wide : undefined}>
-      <ScreenHeader
-        onBack={goBack}
-        right={
-          <AppText variant="body" muted style={styles.counter}>
-            {idx + 1} / {TOTAL}
-          </AppText>
-        }
-      />
+    <Screen background={colors.primaryPressed}>
+      {/* 헤더: 뒤로 + 진행바 + 카운터 + 닫기 */}
+      <View style={styles.header}>
+        <Pressable
+          onPress={goBack}
+          accessibilityRole="button"
+          accessibilityLabel={idx > 0 ? '이전 문항으로' : '테스트 시작 화면으로'}
+          hitSlop={spacing.sm}
+          style={({ pressed }) => [styles.iconBtn, pressed && styles.pressedDim]}
+        >
+          <Ionicons name="arrow-back" size={24} color={palette.white} />
+        </Pressable>
 
-      <View style={styles.progressWrap}>
-        <ProgressBar value={(idx + 1) / TOTAL} accessibilityLabel={`${idx + 1}번째 문항 / 총 ${TOTAL}`} />
-      </View>
-
-      <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
-        <AppText variant="h2" center style={styles.prompt}>
-          {question.prompt}
-        </AppText>
-        <AppText variant="body" muted center style={styles.hint}>
-          더 끌리는 쪽을 눌러주세요
-        </AppText>
-
-        <View style={[styles.options, isDesktop && styles.optionsRow]}>
-          {/* 두 선택지는 대등 — 색으로 한쪽에 기울지 않게 중립 밴드 + 잉크 라벨 */}
-          <OptionCard
-            poleLabel={question.leftAxisLabel}
-            title={question.left.title}
-            desc={question.left.desc}
-            accent={colors.surfaceAlt}
-            poleColor={colors.textPrimary}
-            selected={selected === -2}
-            wide={isDesktop}
-            onPress={() => select(-2)}
-          />
-          <OptionCard
-            poleLabel={question.rightAxisLabel}
-            title={question.right.title}
-            desc={question.right.desc}
-            accent={colors.surfaceAlt}
-            poleColor={colors.textPrimary}
-            selected={selected === 2}
-            wide={isDesktop}
-            onPress={() => select(2)}
+        <View style={styles.progressWrap}>
+          <ProgressBar
+            value={(idx + 1) / TOTAL}
+            height={8}
+            trackColor={TRACK_WHITE}
+            fillColor={colors.accentYellow}
+            accessibilityLabel={`${idx + 1}번째 문항, 총 ${TOTAL}문항`}
           />
         </View>
+        <AppText variant="caption" weight="medium" color={palette.white} tabular>
+          {idx + 1} / {TOTAL}
+        </AppText>
 
         <Pressable
-          onPress={() => select(0)}
+          onPress={closeTest}
           accessibilityRole="button"
-          accessibilityLabel="두 쪽이 비슷해요"
-          style={({ pressed }) => [styles.neutral, pressed && styles.neutralPressed]}
+          accessibilityLabel="테스트 닫기"
+          hitSlop={spacing.sm}
+          style={({ pressed }) => [styles.iconBtn, pressed && styles.pressedDim]}
         >
-          <AppText variant="body" muted weight="semibold">
-            비슷해요 / 잘 모르겠어요
-          </AppText>
+          <Ionicons name="close" size={24} color={palette.white} />
         </Pressable>
+      </View>
+
+      <ScrollView
+        style={styles.flex}
+        contentContainerStyle={styles.body}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* 질문 헤드라인 */}
+        <AppText variant="h2" color={palette.white} style={styles.prompt}>
+          {question.prompt}?
+        </AppText>
+
+        {/* 사진 선택 카드 2장 */}
+        <View style={styles.options}>
+          <PhotoOption
+            image={imgA}
+            label={question.choiceA}
+            selected={selected === -25}
+            onPress={() => select(-25)}
+          />
+          <PhotoOption
+            image={imgB}
+            label={question.choiceB}
+            selected={selected === 25}
+            onPress={() => select(25)}
+          />
+        </View>
       </ScrollView>
     </Screen>
   );
 }
 
-interface OptionCardProps {
-  poleLabel: string;
-  title: string;
-  desc: string;
-  accent: string;
-  poleColor: string;
+interface PhotoOptionProps {
+  image: number;
+  label: string;
   selected: boolean;
-  /** 데스크탑 좌우 배치용(카드가 행 안에서 균등 분할) */
-  wide?: boolean;
   onPress: () => void;
 }
 
-function OptionCard({ poleLabel, title, desc, accent, poleColor, selected, wide, onPress }: OptionCardProps) {
+function PhotoOption({ image, label, selected, onPress }: PhotoOptionProps) {
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={`${title}. ${desc}`}
+      accessibilityLabel={label}
       accessibilityState={{ selected }}
-      style={({ pressed }) => [
-        styles.card,
-        wide && styles.cardWide,
-        selected && styles.cardSelected,
-        pressed && styles.cardPressed,
-      ]}
+      style={({ pressed }) => [styles.card, selected && styles.cardSelected, pressed && styles.cardPressed]}
     >
-      <View style={styles.cardBody}>
-        <View style={styles.poleRow}>
-          <View style={[styles.poleChip, { backgroundColor: accent }, selected && styles.poleChipSelected]}>
-            <AppText variant="caption" weight="bold" color={selected ? colors.primary : poleColor}>
-              {poleLabel}
-            </AppText>
-          </View>
-          {selected && (
-            <View style={styles.checkCircle}>
-              <Ionicons name="checkmark" size={18} color={colors.onPrimary} />
-            </View>
-          )}
-        </View>
-        <AppText variant="title">{title}</AppText>
-        <AppText variant="body" muted style={styles.cardDesc}>
-          {desc}
+      <Image source={image} style={StyleSheet.absoluteFill} contentFit="cover" transition={150} />
+      <LinearGradient colors={LABEL_GRADIENT} locations={[0.45, 1]} style={StyleSheet.absoluteFill} />
+      <View style={styles.cardLabelWrap}>
+        <AppText variant="bodyLg" color={palette.white}>
+          {label}
         </AppText>
       </View>
+      {selected && (
+        <View style={styles.checkBadge}>
+          <Ionicons name="checkmark" size={18} color={colors.textPrimary} />
+        </View>
+      )}
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
+  flex: {
+    flex: 1,
+  },
   restoring: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  counter: {
-    paddingHorizontal: spacing.md,
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingTop: spacing.xl,
+    paddingBottom: spacing.sm,
+  },
+  iconBtn: {
+    width: MIN_TOUCH_SIZE,
+    height: MIN_TOUCH_SIZE,
+    borderRadius: radius.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   progressWrap: {
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing.xs,
-    paddingBottom: spacing.md,
-  },
-  body: {
-    paddingHorizontal: spacing.xl,
-    paddingBottom: spacing.xxl,
-    gap: spacing.sm,
-  },
-  prompt: {
-    lineHeight: 34,
-    marginTop: spacing.sm,
-  },
-  hint: {
-    marginBottom: spacing.lg,
-  },
-  options: {
-    gap: spacing.base,
-  },
-  optionsRow: {
-    flexDirection: 'row',
-    gap: spacing.xl,
-    alignItems: 'stretch',
-  },
-  card: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.xl,
-    overflow: 'hidden',
-    borderWidth: 2,
-    borderColor: colors.border,
-    ...shadows.soft,
-  },
-  cardWide: {
     flex: 1,
   },
+  pressedDim: {
+    opacity: 0.7,
+  },
+  body: {
+    flexGrow: 1,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.xxl,
+  },
+  prompt: {
+    lineHeight: 38,
+    maxWidth: 334,
+    paddingBottom: spacing.xxxl,
+  },
+  options: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    gap: spacing.xl,
+  },
+  card: {
+    height: 220,
+    borderRadius: radius.md,
+    overflow: 'hidden',
+    backgroundColor: colors.surfaceInset,
+    ...shadows.card,
+  },
   cardSelected: {
-    borderColor: colors.primary,
-    backgroundColor: colors.primaryTint,
+    borderWidth: 3,
+    borderColor: colors.accentYellow,
   },
   cardPressed: {
-    opacity: 0.95,
+    opacity: 0.92,
     transform: [{ scale: 0.99 }],
   },
-  cardBody: {
-    padding: spacing.lg,
-    gap: spacing.xs,
+  cardLabelWrap: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    padding: spacing.base,
   },
-  poleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: spacing.sm,
-  },
-  poleChip: {
-    minHeight: 32,
-    paddingHorizontal: spacing.md,
+  checkBadge: {
+    position: 'absolute',
+    top: spacing.md,
+    right: spacing.md,
+    width: 32,
+    height: 32,
     borderRadius: radius.pill,
+    backgroundColor: colors.accentYellow,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  poleChipSelected: {
-    backgroundColor: colors.surface,
-  },
-  checkCircle: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cardDesc: {
-    lineHeight: 26,
-  },
-  neutral: {
-    alignSelf: 'center',
-    marginTop: spacing.lg,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.xl,
-    borderRadius: radius.pill,
-    backgroundColor: colors.surfaceInset,
-  },
-  neutralPressed: {
-    backgroundColor: colors.surfaceAlt,
   },
 });

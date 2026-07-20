@@ -1,45 +1,61 @@
 /**
- * Feellog 디자인 토큰 — 타이포그래피 (v5)
+ * Feellog 디자인 토큰 — 타이포그래피 (v6 "Figma DS" 정본).
  *
- * Pretendard Variable 셀프호스팅(public/fonts/pretendard, 다이내믹 서브셋 — 화면에 쓰인
- * 유니코드 구간만 로드). 웹은 +html.tsx에서 CSS 로드, 네이티브는 시스템 폰트 자연 폴백.
+ * 폰트 2종 셀프호스팅(public/fonts, +html.tsx에서 @font-face):
+ *  · SUIT — UI 전반(300~800). OFL 1.1.
+ *  · Ownglyph brilliant(온글잎 영롱) — 한글 디스플레이/히어로 장식체. 임베딩 허용(파일 수정 금지).
+ * 로고(Feellog 손글씨)는 폰트가 아니라 Figma 추출 SVG(components/FeellogLogo)를 쓴다.
  *
- * 한국 실서비스 관례(토스·오늘의집 실측): 제목 700·서브 600·본문 400·라벨 500,
- * 큰 글자일수록 음수 자간(옵티컬), 한글 본문 행간 1.5~1.6, word-break: keep-all.
- * 시니어 가독성: 본문 18px 하한 절대 유지, 300 이하 웨이트 금지.
+ * 스케일: Figma named TEXT styles 실측값 그대로.
  */
 import { Platform } from 'react-native';
 
-const WEB_STACK =
-  "'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', system-ui, sans-serif";
+const SUIT_STACK =
+  "SUIT, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', system-ui, sans-serif";
+const DISPLAY_STACK = "'Ownglyph brilliant', " + SUIT_STACK;
 
 export const fontFamily = {
-  // 콤마 폴백 스택은 웹 전용(네이티브 Typeface는 단일명 조회) — Platform 분기 필수
-  base: Platform.select({ web: WEB_STACK, default: 'Pretendard' }) as string,
+  base: Platform.select({ web: SUIT_STACK, default: 'SUIT' }) as string,
+  /** 손글씨 디스플레이(온보딩 타이틀·홈 카드 타이틀 장식) */
+  display: Platform.select({ web: DISPLAY_STACK, default: 'Ownglyph brilliant' }) as string,
 } as const;
 
 export const fontWeight = {
+  light: '300',
   regular: '400',
   medium: '500',
   semibold: '600',
   bold: '700',
-  /** 워드마크·히어로 전용(가변폰트라 정확한 800 렌더) */
   extrabold: '800',
 } as const;
 
 /**
- * 텍스트 스타일 프리셋 — <AppText variant="body"> 형태로 사용.
- * letterSpacing은 RN px 단위(em 아님) — 큰 제목일수록 더 조인다.
- * weight 규칙: 화면당 700은 제목 1~2곳, 수치·강조 600, 본문 400, 라벨·캡션 500.
+ * 텍스트 스타일 프리셋 — Figma Typography/* 스타일 1:1.
+ * display만 Ownglyph, 나머지는 SUIT.
  */
 export const typography = {
-  display: { fontSize: 32, lineHeight: 42, fontWeight: fontWeight.bold, letterSpacing: -0.8 },
-  h1: { fontSize: 26, lineHeight: 36, fontWeight: fontWeight.bold, letterSpacing: -0.6 },
-  h2: { fontSize: 22, lineHeight: 31, fontWeight: fontWeight.bold, letterSpacing: -0.4 },
-  title: { fontSize: 20, lineHeight: 28, fontWeight: fontWeight.semibold, letterSpacing: -0.3 },
-  bodyLg: { fontSize: 19, lineHeight: 30, fontWeight: fontWeight.regular, letterSpacing: -0.2 },
-  body: { fontSize: 18, lineHeight: 29, fontWeight: fontWeight.regular, letterSpacing: -0.2 }, // 시니어 기본 본문
-  caption: { fontSize: 16, lineHeight: 24, fontWeight: fontWeight.medium, letterSpacing: 0 }, // 15→16 시니어 보정
+  /** Display2: 온글잎 영롱 36/1.3 — 온보딩·히어로 */
+  display: { fontFamily: fontFamily.display, fontSize: 36, lineHeight: 47, fontWeight: fontWeight.regular as '400' },
+  /** H1: SUIT 700 32 — 페이지 제목 */
+  h1: { fontSize: 32, lineHeight: 45, fontWeight: fontWeight.bold },
+  /** H2: SUIT 700 28 — 섹션 제목 */
+  h2: { fontSize: 28, lineHeight: 39, fontWeight: fontWeight.bold },
+  /** H3: SUIT 600 24 */
+  h3: { fontSize: 24, lineHeight: 34, fontWeight: fontWeight.semibold },
+  /** Title: SUIT 700 20 */
+  title: { fontSize: 20, lineHeight: 30, fontWeight: fontWeight.bold },
+  /** Title_w: SUIT 800 20 — CTA 버튼 라벨 */
+  titleW: { fontSize: 20, lineHeight: 30, fontWeight: fontWeight.extrabold },
+  /** Body Large: SUIT 600 18 */
+  bodyLg: { fontSize: 18, lineHeight: 29, fontWeight: fontWeight.semibold },
+  /** Body: SUIT 300 16 — 기본 본문(디자인 정본) */
+  body: { fontSize: 16, lineHeight: 26, fontWeight: fontWeight.light },
+  /** body2: SUIT 700 16 — 본문 강조 */
+  body2: { fontSize: 16, lineHeight: 26, fontWeight: fontWeight.bold },
+  /** Caption: SUIT 400 14 */
+  caption: { fontSize: 14, lineHeight: 21, fontWeight: fontWeight.regular },
+  /** Small: SUIT 400 12 — 법적 문구·타임스탬프 */
+  small: { fontSize: 12, lineHeight: 17, fontWeight: fontWeight.regular },
 } as const;
 
 export type TypographyToken = keyof typeof typography;

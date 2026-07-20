@@ -1,358 +1,543 @@
 /**
- * 활동 상세 — 매칭% + 요약 + 메타(지역/소요/참가비/강도) + 지도 미리보기 + 예약.
- * 예약: booking_url 있으면 외부 링크, 없으면(샘플/데모) 완료 상태를 목업으로 표시.
- * 데스크탑: 본문(좌) + 예약·위치 레일(우) 2컬럼, 모바일: 세로 스택 + 하단 고정 예약 버튼.
+ * 클래스 상세 (Figma 559-3774) — v6 블루 DS.
+ * 플로팅 뒤로가기 → 사진 히어로 → 태그칩 → 제목/평점 → 가격·소요시간·난이도 3분할
+ * → 소개 카드 → 위치(지도 placeholder + 카카오맵) → 후기 → 하단 찜·장바구니·예약 CTA.
+ * 예약은 온라인 미지원 — 준비중 시트로 정직하게 안내(BookingSheet).
  */
-import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { ActivityIndicator, Linking, ScrollView, StyleSheet, View } from 'react-native';
-
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
+import { router, useLocalSearchParams } from 'expo-router';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Pressable, StyleSheet, View } from 'react-native';
 
-import { fetchActivity, type AppActivity } from '@/api/activities';
-import { CategoryBand } from '@/components/CategoryBand';
-import { matchScore } from '@/core';
-import { useBreakpoint } from '@/hooks/useBreakpoint';
+// NOTE: '@/assets/*'는 tsconfig에서 루트 assets/로 매핑돼 '@/assets/figmaAssets'가
+// 타입 해석에 실패한다(전 화면 공통 이슈). 자체 정합을 위해 상대 경로로 가져온다.
+import { figmaAssets } from '../../assets/figmaAssets';
+import { BookingSheet } from '@/components/activity_BookingSheet';
+import type { Activity } from '@/core';
+import { ACTIVITY_SEED } from '@/data/activitySeed';
+import {
+  demoDifficulty,
+  demoDurationMin,
+  demoPhoto,
+  demoPrice,
+  demoRating,
+  demoRegion,
+  demoTags,
+  formatDuration,
+  formatPrice,
+} from '@/data/activityDisplay';
+import { useCart, useWishlist } from '@/hooks/useCollections';
 import { track } from '@/lib/analytics';
-import { useTaste } from '@/hooks/useTaste';
-import { colors, CONTENT_WIDTH, radius, spacing } from '@/tokens';
-import { AppText, Badge, Button, Card, Screen, ScreenHeader } from '@/ui';
-import { formatDuration, formatIntensity, formatPrice, formatRegion } from '@/utils/format';
+import { colors, radius, shadows, spacing } from '@/tokens';
+import { AppText, Button, Card, Chip, Screen, Stars } from '@/ui';
 import { openKakaoMapSearch } from '@/utils/maps';
+
+// 'cart_add'는 아직 AnalyticsEvent 유니온에 없다(analytics.ts는 소유권 밖 파일).
+// 런타임은 문자열 이벤트를 그대로 적재하므로 동작에는 문제 없음 — 유니온 추가는 todo.
+const CART_ADD_EVENT = 'cart_add';
+
+/** id → 안정 해시(후기 데모 결정적 생성용 — activityDisplay와 동일 방식) */
+function hashOf(id: string): number {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) | 0;
+  return Math.abs(h);
+}
+
+/** 카테고리별 소개 보강 문구(데모) — summary 뒤에 이어붙여 상세 소개를 만든다 */
+const CATEGORY_INTRO: Record<string, string> = {
+  요리: '재료 손질부터 완성까지 차근차근 따라 하다 보면 어느새 근사한 결과물이 완성됩니다.',
+  수공예: '차분한 분위기 속에서 재료를 손끝으로 만지며 나만의 작품을 완성해보세요.',
+  미술: '잘 그리지 않아도 괜찮아요. 선 하나, 색 하나에 집중하는 시간 자체가 힐링이 됩니다.',
+  플라워: '계절의 꽃과 초록을 가까이 두는 것만으로도 일상의 공기가 달라집니다.',
+  뷰티: '나를 가꾸는 손길 하나하나가 자신감이 되어 돌아옵니다.',
+  액티비티: '몸을 움직이며 쌓인 긴장을 풀고, 함께하는 사람들과 활력을 나눠보세요.',
+  음악: '소리에 귀 기울이며 연주하다 보면 마음이 차분히 정돈됩니다.',
+  라이프스타일: '작은 습관 하나가 일상의 결을 바꿉니다. 부담 없이 시작해보세요.',
+  정규: '꾸준히 이어가는 정규 과정으로, 회차를 거듭할수록 깊어지는 즐거움을 느낄 수 있습니다.',
+};
+
+function introOf(a: Activity): string {
+  const enrich = CATEGORY_INTRO[a.category] ?? '';
+  return `${a.summary}. ${enrich} 지친 일상에서 벗어나 오롯이 나에게 집중하는 시간을 선사합니다.`;
+}
+
+/** 데모 후기 — 활동 id 기반 결정적 생성(닉네임·별점·본문) */
+const REVIEW_NAMES = ['보라도리뚜비', '재현', '민수엄마', '햇살가득', '정원지기', '새벽커피', '구름산책', '소소한하루'];
+const REVIEW_BODIES = [
+  '선생님이 너무 친절하시고 공간 분위기가 너무 좋았어요. 처음이었는데 예쁘게 완성해서 만족합니다!',
+  '데이트 코스로 추천해요. 조용하게 집중할 수 있어서 힐링되는 시간이었어요.',
+  '설명이 차분하고 자세해서 따라가기 쉬웠어요. 완성물을 집에 가져오니 뿌듯하네요.',
+  '두 시간이 금방 지나갔어요. 다음에는 친구랑 같이 오려고 합니다.',
+  '초보도 부담 없이 즐길 수 있었어요. 공간도 깨끗하고 아늑합니다.',
+  '혼자 갔는데도 어색하지 않게 챙겨주셔서 좋았어요. 또 방문하고 싶어요.',
+];
+
+interface DemoReview {
+  name: string;
+  stars: number;
+  body: string;
+}
+
+function demoReviews(a: Activity): DemoReview[] {
+  const h = hashOf(a.id);
+  return Array.from({ length: 4 }, (_, i) => ({
+    name: REVIEW_NAMES[(h + i * 3) % REVIEW_NAMES.length],
+    stars: 5 - ((h + i) % 2),
+    body: REVIEW_BODIES[(h + i) % REVIEW_BODIES.length],
+  }));
+}
+
+const CART_TOAST_MS = 2200;
 
 export default function ActivityDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { taste } = useTaste();
-  const { isDesktop } = useBreakpoint();
-  const [activity, setActivity] = useState<AppActivity | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [bookError, setBookError] = useState(false);
+  const activity = useMemo(() => ACTIVITY_SEED.find((a) => a.id === id) ?? null, [id]);
+
+  const { isWished, toggle } = useWishlist();
+  const { count: cartCount, add: addToCart } = useCart();
+
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [showAllReviews, setShowAllReviews] = useState(false);
+  const [cartToast, setCartToast] = useState(false);
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    let mounted = true;
-    (async () => {
-      setLoading(true);
-      try {
-        const a = id ? await fetchActivity(id) : null;
-        if (mounted) {
-          setActivity(a);
-          if (a) track('activity_view', { activityId: a.id });
-        }
-      } catch {
-        if (mounted) setActivity(null);
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    })();
-    return () => {
-      mounted = false;
-    };
-  }, [id]);
+    if (activity) track('activity_view', { activityId: activity.id });
+  }, [activity?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const maxWidth = isDesktop ? CONTENT_WIDTH.wide : undefined;
+  useEffect(
+    () => () => {
+      if (toastTimer.current != null) clearTimeout(toastTimer.current);
+    },
+    [],
+  );
 
-  if (loading) {
-    return (
-      <Screen edges={['top', 'bottom']} noPadding maxWidth={maxWidth}>
-        <ScreenHeader title="활동 상세" />
-        <View style={styles.center}>
-          <ActivityIndicator color={colors.primary} />
-        </View>
-      </Screen>
-    );
-  }
+  const goBack = () => {
+    if (router.canGoBack()) router.back();
+    else router.replace('/home');
+  };
 
   if (!activity) {
     return (
-      <Screen edges={['top', 'bottom']} noPadding maxWidth={maxWidth}>
-        <ScreenHeader title="활동 상세" />
-        <View style={styles.center}>
-          <AppText variant="h2" center>
-            활동을 찾을 수 없어요
+      <Screen scroll contentStyle={styles.notFound}>
+        <FloatingBack onPress={goBack} />
+        <View style={styles.notFoundBody}>
+          <AppText variant="h3" center>
+            클래스를 찾을 수 없어요
           </AppText>
-          <AppText variant="body" muted center style={styles.notFoundBody}>
-            삭제되었거나 잠시 후 다시 시도해주세요.
+          <AppText variant="body" muted center>
+            삭제되었거나 주소가 바뀌었을 수 있어요.
           </AppText>
-          <Button label="추천으로 돌아가기" variant="secondary" onPress={() => router.replace('/reco')} />
+          <Button label="홈으로 가기" onPress={() => router.replace('/home')} style={styles.notFoundBtn} />
         </View>
       </Screen>
     );
   }
 
-  const score = taste ? matchScore(taste.vector, activity.vector) : null;
-  const region = formatRegion(activity.regionSido, activity.regionSigungu);
-  const mapQuery = `${activity.partnerName ?? activity.title} ${activity.regionSigungu ?? activity.regionSido ?? ''}`.trim();
+  const rating = demoRating(activity);
+  const tags = demoTags(activity);
+  const region = demoRegion(activity);
+  const address = `${region} 123-45 2층`;
+  const reviews = demoReviews(activity);
+  const visibleReviews = showAllReviews ? reviews : reviews.slice(0, 2);
+  const wished = isWished(activity.id);
+  // 시드 활동은 카테고리 대표 실사진, 그 외(미래 실데이터)는 상세 히어로 기본 사진
+  const heroSource = ACTIVITY_SEED.includes(activity)
+    ? demoPhoto(activity)
+    : figmaAssets.photos.classDetailHero;
 
-  // 예약 링크가 없거나 열기 실패 시 절대 "완료"로 속이지 않는다(시니어 신뢰선)
-  const onBook = async () => {
-    if (!activity.bookingUrl) return;
-    track('booking_click', { activityId: activity.id });
-    setBookError(false);
-    try {
-      await Linking.openURL(activity.bookingUrl);
-    } catch {
-      setBookError(true);
-    }
-  };
-
-  const onMap = () => {
+  const onOpenMap = () => {
     track('map_open', { activityId: activity.id });
-    void openKakaoMapSearch(mapQuery);
+    void openKakaoMapSearch(`${region} ${activity.name}`);
   };
 
-  const hero = (
-    <View style={[styles.band, isDesktop && styles.bandDesk]}>
-      <CategoryBand
-        imageUrl={activity.imageUrl}
-        category={activity.category}
-        height={isDesktop ? 340 : 260}
-        glyphSize={40}
-      />
-      {score != null && (
-        <View style={styles.badgeOverlay}>
-          <Badge label={`${score}% 잘 맞아요 · 취향 매칭`} tone="onPhoto" />
-        </View>
-      )}
-    </View>
-  );
+  const onWish = () => {
+    void toggle(activity.id);
+  };
 
-  const mainInfo = (
-    <>
-      <AppText variant="h1" style={styles.title}>
-        {activity.title}
-      </AppText>
-      {activity.summary != null && (
-        <AppText variant="bodyLg" muted style={styles.summary}>
-          {activity.summary}
-        </AppText>
-      )}
+  const onCartAdd = () => {
+    void addToCart(activity.id);
+    track(CART_ADD_EVENT, { activityId: activity.id });
+    setCartToast(true);
+    if (toastTimer.current != null) clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setCartToast(false), CART_TOAST_MS);
+  };
 
-      {activity.keywords.length > 0 && (
-        <View style={styles.chips}>
-          {activity.keywords.map((k) => (
-            <Badge key={k} label={k} tone="neutral" size="sm" shape="square" />
-          ))}
-        </View>
-      )}
+  const onBook = () => {
+    track('booking_click', { activityId: activity.id });
+    setSheetOpen(true);
+  };
 
-      <View style={styles.metaGrid}>
-        <MetaCell label="지역" value={region} />
-        <MetaCell label="소요 시간" value={formatDuration(activity.durationMin)} />
-        <MetaCell label="참가비" value={formatPrice(activity.price)} />
-        <MetaCell label="활동 강도" value={formatIntensity(activity.intensity)} />
-      </View>
-
-      {activity.partnerName != null && (
-        <AppText variant="caption" muted style={styles.partner}>
-          제공 · {activity.partnerName}
-        </AppText>
-      )}
-    </>
-  );
-
-  const mapCard = (
-    <View style={styles.section}>
-      <AppText variant="title">위치</AppText>
-      <Card padding="lg" elevation="soft" style={styles.mapCard}>
-        <View style={styles.mapRow}>
-          <Ionicons name="location-outline" size={22} color={colors.primaryInk} />
-          <AppText variant="body" weight="semibold">
-            {region}
+  const footer = (
+    <View>
+      {cartToast && (
+        <Pressable
+          onPress={() => router.push('/cart')}
+          accessibilityRole="button"
+          accessibilityLabel="장바구니에 담았어요. 장바구니 보러 가기"
+          style={styles.toast}
+        >
+          <Ionicons name="checkmark-circle" size={18} color={colors.onPrimary} />
+          <AppText variant="caption" weight="bold" color={colors.onPrimary}>
+            담았어요 · 장바구니 보기
           </AppText>
-        </View>
-        <Button
-          label="카카오맵에서 보기"
-          variant="secondary"
-          onPress={onMap}
-          style={styles.mapBtn}
-          accessibilityLabel={`${activity.title} 위치를 카카오맵에서 보기`}
-        />
-      </Card>
-    </View>
-  );
-
-  // 예약 CTA: 링크가 있으면 외부 예약, 없으면 다음 행동(위치 확인)을 버튼으로 제시
-  // — 회색 안내문만 남기는 막다른 길 금지(적대적 리뷰: 시니어 퍼널)
-  const bookingAction = activity.bookingUrl ? (
-    <View style={styles.bookedRow}>
-      <Button label="예약하기" onPress={onBook} />
-      {bookError && (
-        <AppText variant="caption" color={colors.danger} center>
-          예약 페이지를 열지 못했어요. 잠시 후 다시 시도해 주세요.
-        </AppText>
+        </Pressable>
       )}
-    </View>
-  ) : (
-    <View style={styles.bookedRow}>
-      <Button
-        label="카카오맵에서 위치 보기"
-        onPress={onMap}
-        accessibilityLabel={`${activity.title} 위치를 카카오맵에서 보기`}
-      />
-      <AppText variant="caption" muted center>
-        온라인 예약은 준비 중이에요. 위치를 확인하고 방문해 보세요.
-      </AppText>
+
+      <View style={styles.footerRow}>
+        <Pressable
+          onPress={onWish}
+          accessibilityRole="button"
+          accessibilityLabel={wished ? '찜 해제하기' : '찜하기'}
+          accessibilityState={{ selected: wished }}
+          style={({ pressed }) => [styles.circleBtn, styles.wishBtn, pressed && styles.pressed]}
+        >
+          <Ionicons name={wished ? 'heart' : 'heart-outline'} size={26} color={colors.accentCoral} />
+        </Pressable>
+
+        <Pressable
+          onPress={onCartAdd}
+          accessibilityRole="button"
+          accessibilityLabel="장바구니에 담기"
+          style={({ pressed }) => [styles.circleBtn, styles.cartBtn, pressed && styles.pressed]}
+        >
+          <Ionicons name="cart-outline" size={26} color={colors.primary} />
+          {cartCount > 0 && (
+            <View style={styles.cartBadge}>
+              <AppText variant="small" weight="bold" color={colors.onPrimary} tabular>
+                {cartCount}
+              </AppText>
+            </View>
+          )}
+        </Pressable>
+
+        <View style={styles.ctaWrap}>
+          <Button label="예약하러 가기" onPress={onBook} accessibilityLabel={`${activity.title} 예약하러 가기`} />
+        </View>
+      </View>
     </View>
   );
-
-  if (isDesktop) {
-    return (
-      <Screen edges={['top', 'bottom']} noPadding maxWidth={maxWidth}>
-        <ScreenHeader title="활동 상세" />
-        <ScrollView contentContainerStyle={[styles.content, styles.contentDesk]} showsVerticalScrollIndicator={false}>
-          {hero}
-          <View style={styles.columns}>
-            <View style={styles.mainCol}>{mainInfo}</View>
-            <View style={styles.rail}>
-              <Card padding="lg" style={styles.bookCard}>
-                <AppText variant="caption" muted>
-                  참가비
-                </AppText>
-                <AppText variant="h2">{formatPrice(activity.price)}</AppText>
-                {bookingAction}
-              </Card>
-              {mapCard}
-            </View>
-          </View>
-        </ScrollView>
-      </Screen>
-    );
-  }
 
   return (
-    <Screen
-      edges={['top', 'bottom']}
-      noPadding
-      footer={bookingAction}
-    >
-      <ScreenHeader title="활동 상세" />
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        {hero}
-        <View style={styles.body}>
-          {mainInfo}
-          {mapCard}
+    <Screen scroll footer={footer} contentStyle={styles.content}>
+      <FloatingBack onPress={goBack} />
+
+      {/* 히어로 사진 */}
+      <Image
+        source={heroSource}
+        style={styles.hero}
+        contentFit="cover"
+        transition={200}
+        accessibilityLabel={`${activity.title} 대표 사진`}
+      />
+
+      {/* 태그 칩 */}
+      <View style={styles.tagRow}>
+        {tags.map((t) => (
+          <Chip key={t} label={`# ${t}`} size="sm" />
+        ))}
+      </View>
+
+      {/* 제목 + 평점 */}
+      <View style={styles.titleBlock}>
+        <AppText variant="h3">{activity.title}</AppText>
+        <View style={styles.ratingRow}>
+          <Stars value={rating.rating} size={20} />
+          <AppText variant="caption" weight="bold" tabular>
+            {rating.rating.toFixed(1)}
+          </AppText>
+          <AppText variant="caption" color={colors.textMuted}>
+            ({rating.count}개의 후기)
+          </AppText>
         </View>
-      </ScrollView>
+      </View>
+
+      {/* 가격 · 소요시간 · 난이도 3분할 */}
+      <View style={styles.metaRow}>
+        <MetaCell label="가격" value={formatPrice(demoPrice(activity))} />
+        <View style={styles.metaDivider} />
+        <MetaCell label="소요시간" value={formatDuration(demoDurationMin(activity))} />
+        <View style={styles.metaDivider} />
+        <MetaCell label="난이도" value={demoDifficulty(activity)} />
+      </View>
+
+      {/* 소개 카드 */}
+      <Card padding="base" cornerRadius="lg">
+        <AppText variant="body">{introOf(activity)}</AppText>
+      </Card>
+
+      {/* 위치 */}
+      <View style={styles.section}>
+        <AppText variant="title">위치</AppText>
+        <Pressable
+          onPress={onOpenMap}
+          accessibilityRole="button"
+          accessibilityLabel={`${activity.title} 위치를 카카오맵에서 보기 — ${address}`}
+          style={({ pressed }) => [styles.mapCard, pressed && styles.pressed]}
+        >
+          <View style={styles.mapImageWrap}>
+            <Image source={figmaAssets.photos.mapWishlist} style={styles.mapImage} contentFit="cover" />
+            <View style={styles.mapOpenPill}>
+              <Ionicons name="map-outline" size={14} color={colors.primary} />
+              <AppText variant="small" weight="bold" color={colors.primary}>
+                카카오맵 열기
+              </AppText>
+            </View>
+          </View>
+          <View style={styles.addressRow}>
+            <Ionicons name="location" size={20} color={colors.primary} />
+            <AppText variant="body">{address}</AppText>
+          </View>
+        </Pressable>
+      </View>
+
+      {/* 후기 */}
+      <View style={styles.section}>
+        <View style={styles.reviewHead}>
+          <AppText variant="title">후기 {rating.count}개</AppText>
+          <Pressable
+            onPress={() => setShowAllReviews((v) => !v)}
+            accessibilityRole="button"
+            accessibilityLabel={showAllReviews ? '후기 접기' : '후기 전체보기'}
+            hitSlop={spacing.md}
+            style={({ pressed }) => [styles.seeAll, pressed && styles.pressed]}
+          >
+            <AppText variant="caption" color={colors.primary}>
+              {showAllReviews ? '접기' : '전체보기'}
+            </AppText>
+          </Pressable>
+        </View>
+
+        <View style={styles.reviewList}>
+          {visibleReviews.map((r, i) => (
+            <Card
+              key={`${r.name}-${i}`}
+              background={colors.surfaceInset}
+              bordered={false}
+              elevation="none"
+              cornerRadius="xl"
+              padding="base"
+            >
+              <View style={styles.reviewTop}>
+                <AppText variant="body2">{r.name}</AppText>
+                <Stars value={r.stars} size={16} />
+              </View>
+              <AppText variant="body" muted style={styles.reviewBody}>
+                {r.body}
+              </AppText>
+            </Card>
+          ))}
+        </View>
+      </View>
+
+      <BookingSheet visible={sheetOpen} onClose={() => setSheetOpen(false)} onOpenMap={onOpenMap} />
     </Screen>
+  );
+}
+
+/** 플로팅 원형 뒤로가기 — Figma 60x60 흰 원 + 파랑 스트로크 */
+function FloatingBack({ onPress }: { onPress: () => void }) {
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel="뒤로가기"
+      style={({ pressed }) => [styles.backBtn, pressed && styles.pressed]}
+    >
+      <Ionicons name="arrow-back" size={28} color={colors.primary} />
+    </Pressable>
   );
 }
 
 function MetaCell({ label, value }: { label: string; value: string }) {
   return (
     <View style={styles.metaCell}>
-      <AppText variant="caption" muted>
-        {label}
-      </AppText>
-      <AppText variant="body" weight="semibold" style={styles.metaValue}>
+      <AppText variant="caption">{label}</AppText>
+      <AppText variant="body" tabular>
         {value}
       </AppText>
     </View>
   );
 }
 
+const BACK_SIZE = 60;
+const CIRCLE_SIZE = 50;
+
 const styles = StyleSheet.create({
-  center: {
-    flex: 1,
+  content: {
+    paddingTop: spacing.md,
+    paddingBottom: spacing.xl,
+    gap: spacing.base,
+  },
+  backBtn: {
+    width: BACK_SIZE,
+    height: BACK_SIZE,
+    borderRadius: radius.pill,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.md,
-    padding: spacing.xl,
+    ...shadows.card,
   },
-  notFoundBody: {
-    marginBottom: spacing.sm,
+  hero: {
+    width: '100%',
+    aspectRatio: 320 / 193,
+    borderRadius: radius.xxl,
+    backgroundColor: colors.surfaceInset,
   },
-  content: {
-    paddingBottom: spacing.xxl,
-  },
-  contentDesk: {
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing.sm,
-    gap: spacing.xl,
-  },
-  band: {},
-  bandDesk: {
-    borderRadius: radius.xl,
-    overflow: 'hidden',
-  },
-  badgeOverlay: {
-    position: 'absolute',
-    top: spacing.base,
-    left: spacing.base,
-  },
-  columns: {
+  tagRow: {
     flexDirection: 'row',
-    gap: spacing.xl,
-    alignItems: 'flex-start',
+    flexWrap: 'wrap',
+    gap: spacing.xs,
   },
-  mainCol: {
-    flex: 1,
-    gap: spacing.base,
+  titleBlock: {
+    gap: spacing.xs,
   },
-  rail: {
-    width: 300,
-    gap: spacing.xl,
-  },
-  bookCard: {
+  ratingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: spacing.sm,
   },
-  body: {
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing.lg,
-    gap: spacing.base,
-  },
-  title: {
-    lineHeight: 40,
-  },
-  summary: {
-    lineHeight: 29,
-  },
-  chips: {
+  metaRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.xs,
-  },
-  metaGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.md,
-    marginTop: spacing.xs,
+    alignItems: 'center',
+    paddingVertical: spacing.sm,
   },
   metaCell: {
-    flexBasis: '47%',
-    flexGrow: 1,
-    backgroundColor: colors.surfaceInset,
-    borderRadius: radius.lg,
-    padding: spacing.base,
+    flex: 1,
+    alignItems: 'center',
     gap: spacing.xs,
   },
-  metaValue: {
-    marginTop: 2,
+  metaDivider: {
+    width: 1,
+    height: 32,
+    backgroundColor: colors.divider,
   },
   section: {
     gap: spacing.sm,
-    marginTop: spacing.sm,
+    marginTop: spacing.xs,
   },
   mapCard: {
-    gap: spacing.sm,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.divider,
+    backgroundColor: colors.surface,
+    overflow: 'hidden',
   },
-  mapRow: {
+  mapImageWrap: {
+    height: 105,
+  },
+  mapImage: {
+    width: '100%',
+    height: '100%',
+  },
+  mapOpenPill: {
+    position: 'absolute',
+    right: spacing.sm,
+    bottom: spacing.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.pill,
+    backgroundColor: colors.surface,
+    ...shadows.card,
+  },
+  addressRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
+    padding: spacing.base,
   },
-  mapBtn: {
-    alignSelf: 'stretch',
-    marginTop: spacing.xs,
+  reviewHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    minHeight: spacing.xxl,
   },
-  partner: {
-    marginTop: spacing.sm,
+  seeAll: {
+    minHeight: spacing.xxl,
+    justifyContent: 'center',
+    paddingHorizontal: spacing.xs,
   },
-  bookedRow: {
-    gap: spacing.sm,
-    alignSelf: 'stretch',
+  reviewList: {
+    gap: spacing.md,
   },
-  noBooking: {
+  reviewTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: spacing.sm,
+  },
+  reviewBody: {
     lineHeight: 26,
-    paddingVertical: spacing.sm,
+  },
+  footerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  circleBtn: {
+    width: CIRCLE_SIZE,
+    height: CIRCLE_SIZE,
+    borderRadius: radius.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+  },
+  wishBtn: {
+    backgroundColor: colors.background,
+    borderColor: colors.accentCoral,
+  },
+  cartBtn: {
+    backgroundColor: colors.surfaceInset,
+    borderColor: colors.primary,
+  },
+  cartBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    minWidth: 20,
+    height: 20,
+    borderRadius: radius.pill,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.xs,
+  },
+  ctaWrap: {
+    flex: 1,
+  },
+  toast: {
+    position: 'absolute',
+    top: -(CIRCLE_SIZE + spacing.xs),
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    minHeight: spacing.xxxl,
+    paddingHorizontal: spacing.base,
+    borderRadius: radius.pill,
+    backgroundColor: colors.textPrimary,
+    ...shadows.floating,
+  },
+  pressed: {
+    opacity: 0.8,
+  },
+  notFound: {
+    paddingTop: spacing.md,
+    gap: spacing.base,
+  },
+  notFoundBody: {
+    flex: 1,
+    justifyContent: 'center',
+    gap: spacing.sm,
+    paddingBottom: spacing.huge,
+  },
+  notFoundBtn: {
+    marginTop: spacing.md,
   },
 });

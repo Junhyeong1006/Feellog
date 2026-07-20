@@ -1,135 +1,419 @@
 /**
- * 커뮤니티 탭 — 이웃들의 취미 기록. 필터: 전체/우리 유형/인기/사진.
- * 실제 글(community_posts)을 보여주고, 글이 없으면 샘플로 폴백. 좋아요/글쓰기/내 글 삭제 지원.
- * 데스크탑: 피드는 읽기 폭(680px) 중앙 컬럼 — 여러 컬럼으로 흩뿌리지 않는다.
+ * 소통 탭 (Figma 518-999 게시글 / 522-796 친구).
+ * 헤더(Feellog 로고 + 장바구니) → 세그먼트 탭 [게시글|친구].
+ * 게시글: 후기쓰기/글쓰기 버튼 + 피드(SAMPLE_POSTS + 내가 쓴 로컬 글 병합, 좋아요 로컬 토글).
+ * 친구: 친구 찾기 검색 + SAMPLE_FRIENDS 리스트(말풍선 → 채팅방) + 친구 추가 FAB(준비중 시트).
  */
-import { router } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
+import { router, type Href } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  TextInput,
+  View,
+} from 'react-native';
 
-import type { Post } from '@/api/community';
-import { EmptyState } from '@/components/EmptyState';
-import { PostCard } from '@/components/PostCard';
-import { useBreakpoint } from '@/hooks/useBreakpoint';
-import { useCommunity } from '@/hooks/useCommunity';
-import { useTaste } from '@/hooks/useTaste';
-import { useAuth } from '@/providers/AuthProvider';
-import { colors, CONTENT_WIDTH, spacing } from '@/tokens';
-import { AppText, Button, Chip, Screen } from '@/ui';
+import { figmaAssets } from '@/assets/figmaAssets';
+import { CommunityFeedPostCard } from '@/components/community_FeedPostCard';
+import { FeellogLogo } from '@/components/FeellogLogo';
+import { SAMPLE_FRIENDS, SAMPLE_POSTS, type SampleFriend } from '@/data/sampleSocial';
+import { useCart } from '@/hooks/useCollections';
+import { useFontScale } from '@/providers/FontScaleProvider';
+import {
+  useLocalComments,
+  useLocalPosts,
+  usePostLikes,
+  type FeedPost,
+} from '@/state/localPosts';
+import {
+  colors,
+  fontFamily,
+  MAX_CONTENT_WIDTH,
+  MIN_TOUCH_SIZE,
+  palette,
+  radius,
+  spacing,
+  typography,
+} from '@/tokens';
+import { AppText, Button, Screen, SegmentedTabs } from '@/ui';
 
-type FilterKey = 'all' | 'mine' | 'popular' | 'photo';
-
-const FILTERS: { key: FilterKey; label: string }[] = [
-  { key: 'all', label: '전체' },
-  { key: 'mine', label: '우리 유형' },
-  { key: 'popular', label: '인기' },
-  { key: 'photo', label: '사진' },
-];
+/** 친구 카드 말풍선 색 사이클(시안: 노랑 → 파랑 → 회색) */
+const BUBBLE_COLORS = [palette.yellow, palette.blue, colors.textMuted];
 
 export default function CommunityScreen() {
-  const { session } = useAuth();
-  const { taste } = useTaste();
-  const myType = taste?.mainType ?? null;
-  const myId = session?.user.id ?? null;
-  const { posts, loading, error, isLiked, likeCountOf, toggleLike, removePost, reload } = useCommunity();
-  const { isDesktop } = useBreakpoint();
-  const [filter, setFilter] = useState<FilterKey>('all');
-
-  const filtered = useMemo(() => {
-    if (filter === 'mine') return myType ? posts.filter((p) => p.authorType === myType) : [];
-    if (filter === 'photo') return posts.filter((p) => p.hasPhoto);
-    // 화면에 보이는 카운트(likeCountOf)로 정렬 → 표시 순서와 표시 숫자가 어긋나지 않게.
-    if (filter === 'popular') return [...posts].sort((a, b) => likeCountOf(b) - likeCountOf(a));
-    return posts;
-  }, [posts, filter, myType, likeCountOf]);
-
-  const canDelete = (post: Post) => Boolean(myId) && !post.isSample && post.userId === myId;
-
-  const onWrite = () => {
-    if (session) router.push('/community/compose');
-    else router.push('/login');
-  };
-
-  const showMineEmpty = filter === 'mine' && !myType;
+  const [tab, setTab] = useState(0);
 
   return (
-    <Screen
-      edges={['top']}
-      scroll
-      background={colors.surfaceAlt}
-      maxWidth={isDesktop ? CONTENT_WIDTH.reading : undefined}
-      contentStyle={styles.content}
-    >
+    <Screen edges={['top']} noPadding>
       <View style={styles.header}>
-        <AppText variant="h2">커뮤니티</AppText>
-        <Button label="글쓰기" size="md" fullWidth={false} onPress={onWrite} />
+        <FeellogLogo width={110} />
+        <CartButton />
       </View>
 
-      <View style={styles.filters}>
-        {FILTERS.map((f) => (
-          <Chip key={f.key} label={f.label} selected={f.key === filter} onPress={() => setFilter(f.key)} />
-        ))}
+      <View style={styles.tabsWrap}>
+        <SegmentedTabs tabs={['게시글', '친구']} activeIndex={tab} onChange={setTab} />
       </View>
 
-      {loading && posts.length === 0 ? (
-        <View style={styles.loading}>
-          <ActivityIndicator color={colors.primary} />
-        </View>
-      ) : error && posts.length === 0 ? (
-        <EmptyState
-          spot="cloud"
-          title="글을 불러오지 못했어요"
-          body={'일시적인 문제예요.\n잠시 후 다시 시도해 주세요.'}
-          action={<Button label="다시 시도" variant="secondary" onPress={() => void reload()} />}
-        />
-      ) : showMineEmpty ? (
-        <EmptyState
-          spot="compass"
-          title="아직 나의 유형이 없어요"
-          body={'성향 테스트를 하면\n같은 유형 이웃들의 글을 볼 수 있어요.'}
-          action={<Button label="성향 테스트 하기" variant="secondary" onPress={() => router.push('/test')} />}
-        />
-      ) : filtered.length === 0 ? (
-        <EmptyState spot="chat" title="아직 글이 없어요" body="첫 이야기를 남겨보세요." />
-      ) : (
-        <View style={styles.list}>
-          {filtered.map((post) => (
-            <PostCard
-              key={post.id}
-              post={post}
-              liked={isLiked(post.id)}
-              likeCount={likeCountOf(post)}
-              onToggleLike={() => toggleLike(post)}
-              onDelete={canDelete(post) ? () => removePost(post.id) : undefined}
-              onOpen={() => router.push(`/community/${post.id}`)}
-            />
-          ))}
-        </View>
-      )}
+      {tab === 0 ? <PostsFeed /> : <FriendsList />}
     </Screen>
   );
 }
 
+/** 헤더 장바구니 원형 버튼(수량 배지) */
+function CartButton() {
+  const { count } = useCart();
+  return (
+    <Pressable
+      onPress={() => router.push('/cart')}
+      accessibilityRole="button"
+      accessibilityLabel={count > 0 ? `장바구니, ${count}개 담김` : '장바구니'}
+      style={({ pressed }) => [styles.cartBtn, pressed && styles.pressedDim]}
+    >
+      <Image source={figmaAssets.icons.cart} style={styles.cartIcon} contentFit="contain" />
+      {count > 0 && (
+        <View style={styles.cartBadge}>
+          <AppText variant="small" weight="bold" color={colors.onPrimary} tabular>
+            {count > 9 ? '9+' : count}
+          </AppText>
+        </View>
+      )}
+    </Pressable>
+  );
+}
+
+// ── 게시글 탭 ──
+
+function PostsFeed() {
+  const { posts: localPosts, loading } = useLocalPosts();
+  const { isLiked, toggle } = usePostLikes();
+  const { countOf } = useLocalComments();
+
+  // 내 글(최신순) 먼저, 샘플은 그 뒤에 원래 순서대로
+  const feed: FeedPost[] = useMemo(() => [...localPosts, ...SAMPLE_POSTS], [localPosts]);
+
+  return (
+    <ScrollView
+      style={styles.flex}
+      contentContainerStyle={styles.feedContent}
+      showsVerticalScrollIndicator={false}
+    >
+      <View style={styles.writeRow}>
+        <Button
+          label="후기쓰기"
+          variant="chipAction"
+          size="md"
+          onPress={() => router.push('/community/review')}
+        />
+        <Button
+          label="글쓰기"
+          variant="chipAction"
+          size="md"
+          onPress={() => router.push('/community/compose')}
+        />
+      </View>
+
+      {loading ? (
+        <View style={styles.loading}>
+          <ActivityIndicator color={colors.primary} />
+        </View>
+      ) : (
+        feed.map((post) => (
+          <CommunityFeedPostCard
+            key={post.id}
+            post={post}
+            liked={isLiked(post.id)}
+            likeCount={post.likeCount + (isLiked(post.id) ? 1 : 0)}
+            commentCount={post.commentCount + countOf(post.id)}
+            onToggleLike={() => void toggle(post.id)}
+            onOpen={() => router.push(`/community/${post.id}`)}
+          />
+        ))
+      )}
+    </ScrollView>
+  );
+}
+
+// ── 친구 탭 ──
+
+function FriendsList() {
+  const { scale } = useFontScale();
+  const [query, setQuery] = useState('');
+  const [sheetOpen, setSheetOpen] = useState(false);
+
+  const friends = useMemo(() => {
+    const q = query.trim();
+    if (!q) return SAMPLE_FRIENDS;
+    return SAMPLE_FRIENDS.filter((f) => f.nickname.includes(q));
+  }, [query]);
+
+  return (
+    <View style={styles.flex}>
+      <ScrollView
+        style={styles.flex}
+        contentContainerStyle={styles.friendsContent}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
+        <View style={styles.searchBar}>
+          <Ionicons name="search" size={20} color={colors.primary} />
+          <TextInput
+            value={query}
+            onChangeText={setQuery}
+            placeholder="친구 찾기"
+            placeholderTextColor={colors.textSecondary}
+            accessibilityLabel="친구 찾기"
+            style={[
+              styles.searchInput,
+              scale !== 1 && { fontSize: Math.round(typography.caption.fontSize * scale) },
+            ]}
+          />
+        </View>
+
+        {friends.length === 0 ? (
+          <AppText variant="body" muted center style={styles.emptyNote}>
+            {`'${query.trim()}' 닉네임의 친구를 찾지 못했어요.`}
+          </AppText>
+        ) : (
+          friends.map((f, i) => <FriendRow key={f.id} friend={f} index={i} />)
+        )}
+      </ScrollView>
+
+      <Pressable
+        onPress={() => setSheetOpen(true)}
+        accessibilityRole="button"
+        accessibilityLabel="친구 추가"
+        style={({ pressed }) => [styles.fab, pressed && styles.pressedDim]}
+      >
+        <Ionicons name="add" size={32} color={colors.primary} />
+      </Pressable>
+
+      <Modal
+        visible={sheetOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setSheetOpen(false)}
+      >
+        <Pressable
+          style={styles.scrim}
+          onPress={() => setSheetOpen(false)}
+          accessibilityRole="button"
+          accessibilityLabel="닫기"
+        >
+          <Pressable style={styles.sheet} onPress={() => {}}>
+            <AppText variant="title" center>
+              친구 추가
+            </AppText>
+            <AppText variant="body" muted center>
+              아직 준비 중인 기능이에요.{'\n'}곧 닉네임으로 친구를 찾고 초대할 수 있어요.
+            </AppText>
+            <Button label="확인" size="md" onPress={() => setSheetOpen(false)} />
+          </Pressable>
+        </Pressable>
+      </Modal>
+    </View>
+  );
+}
+
+function FriendRow({ friend, index }: { friend: SampleFriend; index: number }) {
+  const bubbleColor = BUBBLE_COLORS[index % BUBBLE_COLORS.length];
+  const subtitle =
+    friend.typeLabel ??
+    (friend.isGroup && friend.memberCount != null ? `멤버 ${friend.memberCount}명` : '');
+  const name =
+    friend.isGroup && friend.memberCount != null
+      ? `${friend.nickname} 외 ${Math.max(friend.memberCount - 1, 0)}명`
+      : friend.nickname;
+
+  return (
+    <View style={styles.friendCard}>
+      <View style={styles.friendAvatar}>
+        {friend.avatar != null ? (
+          <Image source={friend.avatar} style={styles.friendAvatarImg} contentFit="cover" />
+        ) : (
+          <Ionicons name="people" size={24} color={colors.primary} />
+        )}
+      </View>
+
+      <View style={styles.friendText}>
+        <AppText variant="body2" numberOfLines={1}>
+          {name}
+        </AppText>
+        {subtitle !== '' && (
+          <AppText variant="caption" muted numberOfLines={1}>
+            {subtitle}
+          </AppText>
+        )}
+      </View>
+
+      {friend.chatId != null && (
+        <Pressable
+          // 채팅 화면 라우트는 별도 구현 — typed routes 생성 전이라 Href 캐스팅
+          onPress={() => router.push(`/chat/${friend.chatId}` as Href)}
+          accessibilityRole="button"
+          accessibilityLabel={`${friend.nickname}와 채팅하기`}
+          style={({ pressed }) => [styles.chatBtn, pressed && styles.pressedDim]}
+        >
+          <Ionicons name="chatbubble" size={28} color={bubbleColor} />
+        </Pressable>
+      )}
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
-  content: {
-    paddingTop: spacing.lg,
-    paddingBottom: spacing.xxl,
-    gap: spacing.lg,
+  flex: {
+    flex: 1,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.sm,
   },
-  filters: {
+  cartBtn: {
+    width: MIN_TOUCH_SIZE,
+    height: MIN_TOUCH_SIZE,
+    borderRadius: radius.pill,
+    backgroundColor: colors.surfaceInset,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cartIcon: {
+    width: 20,
+    height: 20,
+  },
+  cartBadge: {
+    position: 'absolute',
+    top: -2,
+    right: -2,
+    minWidth: 20,
+    height: 20,
+    borderRadius: radius.pill,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.xs,
+  },
+  tabsWrap: {
+    paddingHorizontal: spacing.lg,
+  },
+  pressedDim: {
+    opacity: 0.7,
+  },
+  // 게시글 탭
+  feedContent: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.base,
+    paddingBottom: spacing.xxl,
+    gap: spacing.lg,
+  },
+  writeRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-  },
-  list: {
-    gap: spacing.base,
+    justifyContent: 'flex-end',
+    gap: spacing.md,
   },
   loading: {
     paddingVertical: spacing.xxl,
+  },
+  // 친구 탭
+  friendsContent: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.base,
+    paddingBottom: spacing.huge + spacing.xxl, // FAB에 마지막 카드가 가리지 않게
+    gap: spacing.base,
+  },
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.surfaceInset,
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing.base,
+    minHeight: MIN_TOUCH_SIZE,
+  },
+  searchInput: {
+    flex: 1,
+    fontFamily: fontFamily.base,
+    fontSize: typography.caption.fontSize,
+    fontWeight: typography.caption.fontWeight,
+    color: colors.textPrimary,
+    paddingVertical: spacing.md,
+  },
+  emptyNote: {
+    paddingVertical: spacing.xxl,
+  },
+  friendCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.divider,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.base,
+    paddingVertical: spacing.lg,
+  },
+  friendAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: colors.divider,
+    backgroundColor: colors.primaryTint,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  friendAvatarImg: {
+    width: '100%',
+    height: '100%',
+  },
+  friendText: {
+    flex: 1,
+    gap: 2,
+  },
+  chatBtn: {
+    width: MIN_TOUCH_SIZE,
+    height: MIN_TOUCH_SIZE,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  fab: {
+    position: 'absolute',
+    right: spacing.lg,
+    bottom: spacing.lg,
+    width: 60,
+    height: 60,
+    borderRadius: radius.pill,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  scrim: {
+    flex: 1,
+    backgroundColor: colors.scrim,
+    justifyContent: 'flex-end',
+  },
+  sheet: {
+    width: '100%',
+    maxWidth: MAX_CONTENT_WIDTH,
+    alignSelf: 'center',
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: radius.xxl,
+    borderTopRightRadius: radius.xxl,
+    padding: spacing.xl,
+    paddingBottom: spacing.xxl,
+    gap: spacing.base,
   },
 });

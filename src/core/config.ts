@@ -1,91 +1,84 @@
 /**
- * 추천 엔진 튜닝값 (SSOT) — 이 파일만 바꾸면 로직 건드리지 않고 조정 가능.
- * 값 출처: 개발계획서 2장 + 기획 스크린샷(6유형 중심값 ×4로 -100~100 통일).
- * 향후 A/B·데이터 누적 시 여기 숫자만 교체한다.
+ * 6유형 기준 벡터·메타 — docs/planning/activity_type_profiles_ko.csv에서 생성(수정은 CSV에서).
+ * 유형 판정 = 사용자/활동 7축 벡터와 기준 벡터의 최근접(classify.ts).
  */
-import type { Axis, AxisVector, MainType, SubTrait } from './types';
+import type { AxisVector, MainType, TypeProfile } from './types';
 
-/** 5개 핵심 축 순서 (모든 벡터가 이 순서를 따른다) */
-export const AXES = ['rhythm', 'relation', 'experience', 'participation', 'reward'] as const;
+export interface TypeMeta extends TypeProfile {
+  /** 결과 화면 별칭(짧은 부제) */
+  subtitle: string;
+}
 
-/**
- * 축 표시 메타 — 결과 차트/설명용. label=축 이름, posLabel=+100 극, negLabel=-100 극.
- * 부호는 scoring 규칙과 일치(positive=활동적/교류/새로움/만들기/실용·성취).
- */
-export const AXIS_META: Record<Axis, { label: string; posLabel: string; negLabel: string }> = {
-  rhythm: { label: '활동 리듬', posLabel: '활동적', negLabel: '차분함' },
-  relation: { label: '관계 방식', posLabel: '함께', negLabel: '혼자' },
-  experience: { label: '경험 선호', posLabel: '새로움', negLabel: '익숙함' },
-  participation: { label: '참여 방식', posLabel: '만들기', negLabel: '감상' },
-  reward: { label: '기대 보상', posLabel: '실용·성취', negLabel: '정서·회복' },
+export const TYPE_PROFILES: Record<MainType, TypeMeta> = {
+  T01: {
+    id: 'T01',
+    label: '활기찬 에너지형',
+    subtitle: '액티비티형',
+    description: '몸을 움직이고 생동감 있는 활동을 즐기는 유형',
+    vector: { physical: 25, relation: 10, experience: 15, satisfaction: 0, value: 0, novelty: 5, depth: 0 },
+    categories: ['액티비티', '음악', '라이프스타일'],
+  },
+  T02: {
+    id: 'T02',
+    label: '차분한 힐링형',
+    subtitle: '힐링형',
+    description: '조용한 회복과 부담 없는 활동을 선호하는 유형',
+    vector: { physical: -25, relation: -5, experience: 0, satisfaction: -20, value: -10, novelty: 0, depth: 5 },
+    categories: ['플라워', '미술', '라이프스타일', '요리'],
+  },
+  T03: {
+    id: 'T03',
+    label: '만능 손재주형',
+    subtitle: '공예형',
+    description: '직접 만들고 완성물을 얻을 때 만족하는 유형',
+    vector: { physical: -5, relation: 0, experience: 25, satisfaction: 25, value: 5, novelty: 0, depth: 5 },
+    categories: ['수공예', '요리', '플라워', '뷰티'],
+  },
+  T04: {
+    id: 'T04',
+    label: '함께하는 동행형',
+    subtitle: '소셜형',
+    description: '다른 사람과 함께할 때 활동을 더 즐기는 유형',
+    vector: { physical: 0, relation: 25, experience: 5, satisfaction: -5, value: -5, novelty: 0, depth: -5 },
+    categories: ['액티비티', '요리', '음악', '라이프스타일'],
+  },
+  T05: {
+    id: 'T05',
+    label: '배움의 즐거움형',
+    subtitle: '배움형',
+    description: '꾸준히 배우고 실생활에 활용할 수 있는 기술을 즐기는 유형',
+    vector: { physical: 0, relation: 0, experience: 10, satisfaction: 10, value: 20, novelty: 0, depth: 25 },
+    categories: ['정규', '음악', '라이프스타일', '요리'],
+  },
+  T06: {
+    id: 'T06',
+    label: '감성 충만형',
+    subtitle: '감성형',
+    description: '취향과 분위기와 아름다움과 감성적 자극을 추구하는 유형',
+    vector: { physical: -10, relation: 0, experience: -10, satisfaction: -10, value: -25, novelty: 5, depth: 0 },
+    categories: ['미술', '플라워', '뷰티', '음악', '라이프스타일'],
+  },
 };
 
-/** 축 가중치 (추천 "매칭" 거리 전용) — 개발계획서 2.3.3. 분류에는 쓰지 않는다(§2.2.2). */
-export const AXIS_WEIGHTS: AxisVector = {
-  rhythm: 1.2,
-  relation: 1.1,
-  experience: 1.0,
-  participation: 0.9,
-  reward: 0.8,
+/** 동점(동일 거리) 시 우선순위 — 시드 정의 순서 고정 */
+export const TYPE_ORDER: readonly MainType[] = ['T01', 'T02', 'T03', 'T04', 'T05', 'T06'] as const;
+
+/** 축 라벨(차트·설명용) — 음수 방향 ↔ 양수 방향 */
+export const AXIS_META: Record<keyof AxisVector, { label: string; negative: string; positive: string }> = {
+  physical: { label: '신체 활동', negative: '차분', positive: '활기' },
+  relation: { label: '관계 방식', negative: '혼자', positive: '함께' },
+  experience: { label: '경험 방식', negative: '감상', positive: '직접' },
+  satisfaction: { label: '만족 방식', negative: '과정', positive: '완성' },
+  value: { label: '가치 지향', negative: '감성', positive: '실생활' },
+  novelty: { label: '새로움', negative: '익숙', positive: '새로움' },
+  depth: { label: '참여 깊이', negative: '가볍게', positive: '깊게' },
 };
 
-/** 분류(6유형 최근접 중심)용 균등 가중치 — 개발계획서 §2.2.2 "분류엔 w_a=1(균등)" */
-export const CLASSIFY_WEIGHTS: AxisVector = {
-  rhythm: 1,
-  relation: 1,
-  experience: 1,
-  participation: 1,
-  reward: 1,
-};
-
-/** 완전 동점 시 결정적 tie-break 순서 — 개발계획서 §2.2.2 (재현성 보장) */
-export const TYPE_TIE_ORDER: MainType[] = [
-  'active_explorer', // vitality
-  'warm_social', // warmth
-  'handcraft_achiever', // craft
-  'life_upgrade', // upgrade
-  'culture_enjoyer', // culture
-  'calm_immersion', // stillness
-];
-
-/**
- * 6 메인 유형 중심 벡터 (-100~100). 스크린샷 "활동 유형 6가지"(-25~25) ×4.
- * 컬럼 매핑: 활동리듬=rhythm, 관계방식=relation, 경험방식=experience, 만족방식=participation, 추구가치=reward.
- */
-export const TYPE_CENTROIDS: Record<MainType, AxisVector> = {
-  active_explorer:    { rhythm: 100, relation: 20,  experience: 20,   participation: 0,   reward: 0 },
-  calm_immersion:     { rhythm: -100, relation: -60, experience: 0,    participation: -80, reward: -20 },
-  handcraft_achiever: { rhythm: -20, relation: -20, experience: 100,  participation: 100, reward: 0 },
-  warm_social:        { rhythm: 0,   relation: 100, experience: 20,   participation: -20, reward: -20 },
-  life_upgrade:       { rhythm: 0,   relation: 0,   experience: 40,   participation: 40,  reward: 100 },
-  culture_enjoyer:    { rhythm: -40, relation: 0,   experience: -100, participation: -40, reward: -100 },
-};
-
-/** 유형 한국어 라벨 + 한 줄 설명 */
-export const TYPE_META: Record<MainType, { label: string; tagline: string }> = {
-  active_explorer:    { label: '활력 탐험형',     tagline: '움직이며 새로운 경험을 찾아가는 것을 즐겨요' },
-  calm_immersion:     { label: '고요 몰입형',     tagline: '조용히 집중하며 과정 자체를 음미하는 편이에요' },
-  handcraft_achiever: { label: '손끝 성취형',     tagline: '직접 만들어 완성하고 성취감을 느끼는 것을 좋아해요' },
-  warm_social:        { label: '따뜻한 교류형',   tagline: '사람들과 함께하는 시간을 소중하게 여겨요' },
-  life_upgrade:       { label: '생활 업그레이드형', tagline: '배운 것을 실생활에 활용하는 실용파예요' },
-  culture_enjoyer:    { label: '문화 향유형',     tagline: '공연·전시·음악을 감상하고 음미하는 것을 즐겨요' },
-};
-
-/** 보조 성향 라벨 */
-export const SUB_TRAIT_META: Record<SubTrait, { label: string; tagline: string }> = {
-  trend_seeker:     { label: '트렌드 발견 성향', tagline: '새롭고 감각적인 경험을 선호해요' },
-  recovery_charger: { label: '회복 충전 성향',   tagline: '편안하고 몸과 마음이 회복되는 시간을 원해요' },
-};
-
-/** 보조 성향 표시 임계값 (0~100). 이 값 이상일 때만 배지로 노출(0~1개). */
-export const SUB_TRAIT_THRESHOLD = 60;
-
-/** 보조 성향 박빙 회피 간격 — 두 점수 차가 이보다 작으면 표시하지 않음(개발계획서 §2.1.3) */
-export const SUB_TRAIT_GAP = 8;
-
-/** 카드 피드백 온라인 보정 파라미터 — 개발계획서 2.4 */
-export const FEEDBACK = {
-  eta0: 0.2, // 초기 학습률
-  lambda: 0.05, // 반응 누적에 따른 학습률 감쇠
-  baseDriftClamp: 40, // cur 벡터가 base에서 이탈 가능한 최대 폭(축당)
-};
+/** 피드백 학습률(정책 §4.3) */
+export const FEEDBACK_RULES = {
+  view_detail: { direction: 1, learningRate: 0.02 },
+  like: { direction: 1, learningRate: 0.1 },
+  complete_satisfied: { direction: 1, learningRate: 0.15 },
+  not_interested: { direction: -1, learningRate: 0.05 },
+  strong_dislike: { direction: -1, learningRate: 0.1 },
+} as const;

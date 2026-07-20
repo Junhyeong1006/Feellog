@@ -1,5 +1,5 @@
 /**
- * Divider — 얇은 구분선.
+ * Divider — 얇은 구분선 (v6: 기본 neutral200).
  */
 import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
@@ -12,7 +12,7 @@ export interface DividerProps {
   style?: StyleProp<ViewStyle>;
 }
 
-export function Divider({ gap, color = colors.border, style }: DividerProps) {
+export function Divider({ gap, color = colors.divider, style }: DividerProps) {
   return (
     <View
       style={[

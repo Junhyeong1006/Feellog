@@ -77,6 +77,48 @@ export async function signInWithProvider(provider: OAuthProvider): Promise<void>
   if (exchangeError) throw exchangeError;
 }
 
+/**
+ * 이메일(아이디)+비밀번호 로그인 — v6 디자인의 '입장하기'.
+ * 디자인의 '아이디'는 이메일이다(가입 시 이메일 사용 고지).
+ */
+export async function signInWithPassword(email: string, password: string): Promise<void> {
+  const sb = getSupabase();
+  if (!sb) throw new Error('Supabase가 설정되지 않았습니다 (.env 확인).');
+  const { error } = await sb.auth.signInWithPassword({ email: email.trim(), password });
+  if (error) throw error;
+}
+
+/**
+ * 이메일 회원가입 — 닉네임은 metadata로 전달(트리거가 profiles에 반영).
+ * 이메일 확인 설정에 따라 세션이 즉시 생기지 않을 수 있다(그 경우 안내 필요).
+ */
+export async function signUpWithPassword(
+  email: string,
+  password: string,
+  nickname?: string,
+): Promise<{ needsEmailConfirm: boolean }> {
+  const sb = getSupabase();
+  if (!sb) throw new Error('Supabase가 설정되지 않았습니다 (.env 확인).');
+  const { data, error } = await sb.auth.signUp({
+    email: email.trim(),
+    password,
+    options: {
+      emailRedirectTo: redirectTo(),
+      data: nickname ? { nickname } : undefined,
+    },
+  });
+  if (error) throw error;
+  return { needsEmailConfirm: data.session == null };
+}
+
+/** 비밀번호 재설정 메일 발송('비밀번호 찾기') */
+export async function requestPasswordReset(email: string): Promise<void> {
+  const sb = getSupabase();
+  if (!sb) throw new Error('Supabase가 설정되지 않았습니다 (.env 확인).');
+  const { error } = await sb.auth.resetPasswordForEmail(email.trim(), { redirectTo: redirectTo() });
+  if (error) throw error;
+}
+
 export async function signOut(): Promise<void> {
   const sb = getSupabase();
   if (!sb) return;

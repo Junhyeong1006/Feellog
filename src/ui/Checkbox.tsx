@@ -2,9 +2,10 @@
  * Checkbox — 동의 항목/설정 토글. 터치 영역 넉넉히(시니어).
  * label은 문자열 또는 노드(링크 포함 등). 체크 시 primary 박스 + 흰 체크.
  */
+import { Ionicons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
-import { colors, radius, spacing } from '@/tokens';
+import { colors, MIN_TOUCH_SIZE, radius, spacing } from '@/tokens';
 
 import { AppText } from './Text';
 
@@ -35,11 +36,7 @@ export function Checkbox({
       style={[styles.row, style]}
     >
       <View style={[styles.box, checked ? styles.boxChecked : styles.boxUnchecked]}>
-        {checked && (
-          <AppText color={colors.onPrimary} style={styles.check}>
-            ✓
-          </AppText>
-        )}
+        {checked && <Ionicons name="checkmark" size={18} color={colors.onPrimary} />}
       </View>
       {label != null &&
         (typeof label === 'string' ? (
@@ -58,7 +55,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
-    minHeight: 48,
+    minHeight: MIN_TOUCH_SIZE,
   },
   box: {
     width: 26,
@@ -76,11 +73,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
     borderWidth: 2,
     borderColor: colors.primary,
-  },
-  check: {
-    fontSize: 16,
-    lineHeight: 18,
-    fontWeight: '700',
   },
   label: {
     flex: 1,

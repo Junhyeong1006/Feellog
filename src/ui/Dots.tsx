@@ -1,5 +1,6 @@
 /**
- * Dots — 페이지네이션 점(온보딩 캐러셀 등). 활성 점은 넓은 캡슐.
+ * Dots — 페이지 인디케이터 (v6 블루 DS, Figma Page Indicator/Onboarding).
+ * 활성: 32x8 필(색은 activeColor prop — 온보딩 장마다 파랑/코랄/민트). 비활성: 8x8 neutral200. 간격 12.
  */
 import { StyleSheet, View } from 'react-native';
 
@@ -8,6 +9,7 @@ import { colors, radius, spacing } from '@/tokens';
 export interface DotsProps {
   count: number;
   activeIndex: number;
+  /** 활성 도트 색(기본 primary. 온보딩 장마다 accentCoral/accentMint 등) */
   activeColor?: string;
   inactiveColor?: string;
 }
@@ -16,7 +18,7 @@ export function Dots({
   count,
   activeIndex,
   activeColor = colors.primary,
-  inactiveColor = colors.border,
+  inactiveColor = colors.divider,
 }: DotsProps) {
   return (
     <View style={styles.row} accessibilityLabel={`${count}장 중 ${activeIndex + 1}번째`}>
@@ -42,16 +44,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.sm,
+    gap: spacing.md, // Figma 도트 간격 12
   },
   dot: {
-    height: 8,
+    height: spacing.sm,
     borderRadius: radius.pill,
   },
   active: {
-    width: 24,
+    width: spacing.xxl, // 32x8 필
   },
   inactive: {
-    width: 8,
+    width: spacing.sm, // 8x8
   },
 });

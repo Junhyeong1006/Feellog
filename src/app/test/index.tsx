@@ -1,35 +1,30 @@
 /**
- * 성향 테스트 인트로 (v5) — 사진 히어로 + 흰 시트 안내 + [시작하기].
- * 게스트도 체험 가능(결과 저장은 로그인 후).
- * 데스크탑: [안내 컬럼 | 사진] 2컬럼.
+ * 성향 테스트 시작 (v6 블루 — Figma 50:6699).
+ * 파랑 풀스크린 + 원형 일러스트(기록하는 여성) + 소요시간 칩 + 흰색 시작 CTA.
+ * 저장된 진행분이 있으면 "이어서 하기"로 이어가기(S2 DoD) — 처음부터 다시 시작도 제공.
  */
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import { LinearGradient } from 'expo-linear-gradient';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
-import { HERO_PHOTOS } from '@/components/categoryPhoto';
+import { figmaAssets } from '@/assets/figmaAssets';
 import { QUESTIONS } from '@/core';
-import { useBreakpoint } from '@/hooks/useBreakpoint';
 import { track } from '@/lib/analytics';
-import { useAuth } from '@/providers/AuthProvider';
 import { answeredCount, clearTestProgress, getTestProgress } from '@/state/testProgress';
-import { colors, CONTENT_WIDTH, photoOverlay, radius, spacing } from '@/tokens';
-import { AppText, Badge, Button, Screen } from '@/ui';
+import { colors, MIN_TOUCH_SIZE, palette, radius, shadows, spacing } from '@/tokens';
+import { AppText, Screen } from '@/ui';
 
-// 실제 문항은 텍스트 2택 — '장면 비교'처럼 이미지를 약속하는 카피 금지(적대적 리뷰)
-const POINTS = [
-  { icon: 'checkmark-circle-outline', title: '둘 중 더 끌리는 쪽', body: `${QUESTIONS.length}개의 질문에 답하며 알아가요` },
-  { icon: 'time-outline', title: '약 2분이면 충분해요', body: '천천히 편하게 고르셔도 괜찮아요' },
-  { icon: 'flag-outline', title: '나의 여가 유형', body: '유형과 어울리는 활동을 추천해드려요' },
-] as const;
+const TOTAL = QUESTIONS.length;
 
-export default function TestIntroScreen() {
-  const { session, guest } = useAuth();
-  const { isDesktop } = useBreakpoint();
-  /** 저장된 진행분(있으면 "이어서 하기" 노출). null=없음 */
+/** 스펙 50-6699: 배경 #3673D4 위 반투명 장식/칩 색 */
+const WHITE_A10 = 'rgba(255, 255, 255, 0.1)';
+const MINT_GLOW = 'rgba(133, 230, 199, 0.2)'; // #85E6C7 @0.2
+const PURPLE_GLOW = 'rgba(169, 128, 239, 0.1)'; // #A980EF @0.1
+
+export default function TestStartScreen() {
+  /** 저장된 진행분 응답 수(없으면 null) — 이어하기 노출용 */
   const [resumeCount, setResumeCount] = useState<number | null>(null);
 
   useFocusEffect(
@@ -45,7 +40,6 @@ export default function TestIntroScreen() {
   );
 
   const onStart = () => {
-    // 재개/신규를 구분해 시작 수 중복 집계 방지
     track('test_start', { resumed: resumeCount != null });
     router.push('/test/run');
   };
@@ -53,191 +47,229 @@ export default function TestIntroScreen() {
   const onRestart = async () => {
     await clearTestProgress();
     setResumeCount(null);
-    onStart();
+    track('test_start', { resumed: false });
+    router.push('/test/run');
   };
 
-  const startButtons =
-    resumeCount != null ? (
-      <>
-        <Button label={`이어서 하기 (${resumeCount}/${QUESTIONS.length} 완료)`} onPress={onStart} />
-        <Button label="처음부터 다시 시작" variant="ghost" onPress={onRestart} />
-      </>
-    ) : (
-      <Button label="시작하기" onPress={onStart} />
-    );
-
-  const guide = (
-    <View style={styles.points}>
-      {POINTS.map((p) => (
-        <View key={p.title} style={styles.pointRow}>
-          <View style={styles.pointIcon}>
-            <Ionicons name={p.icon} size={22} color={colors.primary} />
-          </View>
-          <View style={styles.pointText}>
-            <AppText variant="title">{p.title}</AppText>
-            <AppText variant="body" muted style={styles.pointBody}>
-              {p.body}
-            </AppText>
-          </View>
-        </View>
-      ))}
-    </View>
-  );
-
-  if (isDesktop) {
-    return (
-      <Screen scroll maxWidth={CONTENT_WIDTH.wide} contentStyle={styles.deskContent}>
-        <View style={styles.deskColumns}>
-          <View style={styles.deskLeft}>
-            <Badge label={`약 2분 · ${QUESTIONS.length}문항`} tone="primary" />
-            <AppText variant="display" style={styles.deskTitle}>
-              나의 여가 성향{'\n'}알아보기
-            </AppText>
-            <AppText variant="bodyLg" muted style={styles.deskLead}>
-              더 끌리는 쪽을 고르다 보면 나에게 맞는 취미가 보여요
-            </AppText>
-            {guide}
-            <View style={styles.deskStartCol}>{startButtons}</View>
-            {!session && guest && (
-              <AppText variant="caption" muted>
-                지금은 둘러보기 상태예요. 로그인하면 결과가 저장돼요.
-              </AppText>
-            )}
-          </View>
-          <View style={styles.deskPhoto}>
-            <Image source={HERO_PHOTOS.test} style={StyleSheet.absoluteFill} contentFit="cover" />
-          </View>
-        </View>
-      </Screen>
-    );
-  }
+  const onBack = () => {
+    if (router.canGoBack()) router.back();
+    else router.replace('/');
+  };
 
   return (
-    <Screen
-      edges={['bottom']}
-      noPadding
-      scroll
-      footer={<View style={styles.footerCol}>{startButtons}</View>}
-    >
-      {/* 사진 히어로 */}
-      <View style={styles.hero}>
-        <Image source={HERO_PHOTOS.test} style={StyleSheet.absoluteFill} contentFit="cover" />
-        <LinearGradient colors={photoOverlay.bottom} locations={[0.3, 0.6, 1]} style={StyleSheet.absoluteFill} />
-        <View style={styles.heroCopy}>
-          <View style={styles.heroChip}>
-            <AppText variant="caption" weight="bold" color={colors.onPhoto}>
-              약 2분 · {QUESTIONS.length}문항
-            </AppText>
-          </View>
-          <AppText variant="h1" color={colors.onPhoto}>
-            나의 여가 성향 알아보기
+    <Screen scroll background={colors.primaryPressed} contentStyle={styles.content}>
+      {/* 배경 장식 블러 원 */}
+      <View pointerEvents="none" style={[styles.deco, styles.decoMint]} />
+      <View pointerEvents="none" style={[styles.deco, styles.decoPurple]} />
+
+      {/* 헤더: 뒤로가기 + 타이틀 */}
+      <View style={styles.header}>
+        <Pressable
+          onPress={onBack}
+          accessibilityRole="button"
+          accessibilityLabel="뒤로가기"
+          hitSlop={spacing.sm}
+          style={({ pressed }) => [styles.backBtn, pressed && styles.pressedDim]}
+        >
+          <Ionicons name="arrow-back" size={24} color={palette.white} />
+        </Pressable>
+        <View style={styles.headerTitleWrap}>
+          <AppText variant="bodyLg" weight="medium" color={palette.white}>
+            스타일 찾기
           </AppText>
+        </View>
+        <View style={styles.headerSpacer} />
+      </View>
+
+      {/* 타이틀 + 서브 */}
+      <View style={styles.copy}>
+        <AppText variant="h2" weight="medium" center color={palette.white} style={styles.title}>
+          나만의 여가 스타일을{'\n'}찾아볼까요?
+        </AppText>
+        <AppText variant="bodyLg" weight="medium" center color={palette.white} style={styles.subtitle}>
+          {TOTAL}가지 질문을 통해 당신에게 꼭 맞는{'\n'}새로운 취미를 추천해 드려요.
+        </AppText>
+      </View>
+
+      {/* 중앙 원형 일러스트 */}
+      <View style={styles.visualWrap}>
+        <View pointerEvents="none" style={styles.glow} />
+        <View style={styles.circle}>
+          <Image
+            source={figmaAssets.illustrations.testStart}
+            style={styles.illust}
+            contentFit="cover"
+            accessibilityLabel="취미를 기록하는 사람 일러스트"
+          />
         </View>
       </View>
 
-      {/* 안내 시트 */}
-      <View style={styles.sheet}>
-        <AppText variant="body" muted style={styles.lead}>
-          더 끌리는 쪽을 고르다 보면 나에게 맞는 취미가 보여요
-        </AppText>
-        {guide}
-        {!session && guest && (
-          <AppText variant="caption" muted style={styles.guestNote}>
-            지금은 둘러보기 상태예요. 로그인하면 결과가 저장돼요.
+      {/* 소요시간 칩 + CTA */}
+      <View style={styles.bottom}>
+        <View style={styles.timeChip}>
+          <Ionicons name="time-outline" size={16} color={colors.accentYellow} />
+          <AppText variant="caption" weight="medium" color={palette.white}>
+            소요 시간: 약 3분
           </AppText>
+        </View>
+
+        {resumeCount != null ? (
+          <>
+            <WhiteCta
+              label={`이어서 하기 (${resumeCount}/${TOTAL} 완료)`}
+              onPress={onStart}
+            />
+            <Pressable
+              onPress={onRestart}
+              accessibilityRole="button"
+              accessibilityLabel="처음부터 다시 시작"
+              style={({ pressed }) => [styles.restartBtn, pressed && styles.pressedDim]}
+            >
+              <AppText variant="body2" color={palette.white}>
+                처음부터 다시 시작
+              </AppText>
+            </Pressable>
+          </>
+        ) : (
+          <WhiteCta label="테스트 시작하기" onPress={onStart} />
         )}
       </View>
     </Screen>
   );
 }
 
+/** 스펙 전용 흰색 필 CTA(파랑 라벨) — 공용 Button cta(파랑 필)와 반전 형태라 로컬로 구성 */
+function WhiteCta({ label, onPress }: { label: string; onPress: () => void }) {
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      style={({ pressed }) => [styles.cta, pressed && styles.ctaPressed]}
+    >
+      <AppText variant="bodyLg" weight="medium" color={colors.primaryPressed}>
+        {label}
+      </AppText>
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
-  hero: {
-    height: 300,
-    justifyContent: 'flex-end',
+  content: {
+    flexGrow: 1,
+    paddingBottom: spacing.xxxl,
   },
-  heroCopy: {
-    padding: spacing.xl,
-    gap: spacing.md,
-  },
-  heroChip: {
-    alignSelf: 'flex-start',
-    minHeight: 34,
-    paddingHorizontal: spacing.base,
+  deco: {
+    position: 'absolute',
     borderRadius: radius.pill,
-    // 흰 반투명 칩은 밝은 사진에서 AA 미달 — 다크 글래스 + 흰 텍스트(접근성 리뷰)
-    backgroundColor: colors.photoChip,
+  },
+  decoMint: {
+    width: 220,
+    height: 220,
+    top: 120,
+    left: -80,
+    backgroundColor: PURPLE_GLOW,
+  },
+  decoPurple: {
+    width: 260,
+    height: 260,
+    bottom: 100,
+    right: -100,
+    backgroundColor: MINT_GLOW,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    minHeight: 64,
+  },
+  backBtn: {
+    width: MIN_TOUCH_SIZE,
+    height: MIN_TOUCH_SIZE,
+    borderRadius: radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  sheet: {
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing.xl,
-    paddingBottom: spacing.lg,
-    gap: spacing.xl,
+  headerTitleWrap: {
+    flex: 1,
+    alignItems: 'center',
   },
-  lead: {
+  headerSpacer: {
+    width: MIN_TOUCH_SIZE,
+  },
+  copy: {
+    paddingTop: spacing.xxl,
+    gap: spacing.base,
+  },
+  title: {
+    lineHeight: 38,
+  },
+  subtitle: {
+    opacity: 0.9,
     lineHeight: 28,
   },
-  points: {
-    gap: spacing.lg,
+  visualWrap: {
+    flexGrow: 1,
+    minHeight: 320,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.xxxl,
   },
-  pointRow: {
-    flexDirection: 'row',
+  glow: {
+    position: 'absolute',
+    width: 300,
+    height: 300,
+    borderRadius: radius.pill,
+    backgroundColor: MINT_GLOW,
+  },
+  circle: {
+    width: 280,
+    height: 280,
+    borderRadius: radius.pill,
+    borderWidth: 4,
+    borderColor: palette.white,
+    overflow: 'hidden',
+    backgroundColor: palette.white,
+    ...shadows.raised,
+  },
+  illust: {
+    width: '100%',
+    height: '100%',
+  },
+  bottom: {
     alignItems: 'center',
     gap: spacing.base,
   },
-  pointIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: radius.md,
-    backgroundColor: colors.primaryTint,
+  timeChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    minHeight: 38,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: palette.white,
+    backgroundColor: WHITE_A10,
+  },
+  cta: {
+    alignSelf: 'stretch',
+    minHeight: 64,
+    borderRadius: radius.pill,
+    backgroundColor: palette.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...shadows.cta,
+  },
+  ctaPressed: {
+    opacity: 0.9,
+  },
+  restartBtn: {
+    minHeight: MIN_TOUCH_SIZE,
+    paddingHorizontal: spacing.lg,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  pointText: {
-    flex: 1,
-    gap: 2,
-  },
-  pointBody: {
-    lineHeight: 26,
-  },
-  guestNote: {
-    lineHeight: 22,
-  },
-  footerCol: {
-    gap: spacing.xs,
-  },
-  // ── 데스크탑 ──
-  deskContent: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    paddingVertical: spacing.xxl,
-  },
-  deskColumns: {
-    flexDirection: 'row',
-    gap: spacing.xxl,
-    alignItems: 'stretch',
-  },
-  deskLeft: {
-    flex: 1,
-    gap: spacing.lg,
-    justifyContent: 'center',
-  },
-  deskTitle: {
-    lineHeight: 44,
-  },
-  deskLead: {
-    lineHeight: 30,
-  },
-  deskStartCol: {
-    gap: spacing.xs,
-    maxWidth: 360,
-  },
-  deskPhoto: {
-    flex: 1,
-    minHeight: 460,
-    borderRadius: radius.xl,
-    overflow: 'hidden',
+  pressedDim: {
+    opacity: 0.7,
   },
 });

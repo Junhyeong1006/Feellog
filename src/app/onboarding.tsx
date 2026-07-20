@@ -1,88 +1,136 @@
 /**
- * 온보딩 인트로 3장 (v5: 실사진 슬라이드). 좌우로 넘기거나 [다음]으로 진행.
- * 각 장 = 풀블리드 사진(위) + 흰 영역 텍스트(아래) — 사진과 텍스트를 분리(오버레이 없음).
- * 마지막 장에서 [시작하기] → onboardingSeen 저장 후 디사이더로 복귀.
- * 데스크탑: 캐러셀 대신 3장을 사진 카드 한 줄로 펼쳐 보여준다(리사이즈 흔들림 없음).
+ * 온보딩 인트로 3장 (v6 블루 DS — Figma 220-4713 / 220-4741 / 220-4906).
+ * 좌우 스와이프 또는 [다음으로]로 진행. 장마다 인디케이터 활성 색이 다르다(파랑/코랄/민트).
+ * 배경 도형(원·카드·메모지)은 View로 그리고 그 위에 Figma 추출 일러스트 SVG를 겹친다.
+ * 3장 CTA [프로필 만들기] → 프로필 설정으로, 모든 장 [건너뛰기] → 홈으로.
  */
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import {
-  Pressable,
   ScrollView,
   StyleSheet,
   View,
-  type ImageSourcePropType,
   type LayoutChangeEvent,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
 } from 'react-native';
 
-import { categoryPhoto, HERO_PHOTOS } from '@/components/categoryPhoto';
-import { useBreakpoint } from '@/hooks/useBreakpoint';
+// NOTE: '@/assets/*'는 tsconfig에서 루트 assets/로 매핑되어 src/assets는 상대경로로 가져온다
+import { figmaAssets } from '../assets/figmaAssets';
+import { FeellogLogo } from '@/components/FeellogLogo';
 import { setOnboardingSeen } from '@/state/appFlags';
-import { colors, CONTENT_WIDTH, MAX_CONTENT_WIDTH, radius, spacing } from '@/tokens';
+import { palette, colors, MAX_CONTENT_WIDTH, radius, spacing } from '@/tokens';
 import { AppText, Button, Dots, Screen } from '@/ui';
 
 interface Slide {
-  photo: ImageSourcePropType;
   title: string;
-  body: string;
+  sub: string;
+  /** 장별 인디케이터 활성 색 */
+  dotColor: string;
+  art: React.ReactNode;
+}
+
+/** 1장 — 파란 원 238 + 가위 일러스트(원 좌하단에 겹침) */
+function ScissorsArt() {
+  return (
+    <View style={artStyles.scissorsBox}>
+      <View style={artStyles.blueCircle} />
+      <Image
+        source={figmaAssets.illustrations.onboardingScissors}
+        style={artStyles.scissors}
+        contentFit="contain"
+      />
+    </View>
+  );
+}
+
+/** 2장 — 코랄 라운드 카드 320x128 + 세 사람 일러스트(카드 위아래로 삐져나옴) */
+function PeopleArt() {
+  return (
+    <View style={artStyles.peopleBox}>
+      <View style={artStyles.coralCard} />
+      <Image
+        source={figmaAssets.illustrations.onboardingPeople}
+        style={artStyles.people}
+        contentFit="contain"
+      />
+    </View>
+  );
+}
+
+/** 3장 — 회전된 민트 메모지 228 + 흰 줄무늬 + 연필 일러스트 */
+function PencilArt() {
+  return (
+    <View style={artStyles.pencilBox}>
+      <View style={artStyles.memo}>
+        <View style={artStyles.memoLine} />
+        <View style={artStyles.memoLine} />
+        <View style={artStyles.memoLine} />
+        <View style={artStyles.memoLine} />
+        <View style={[artStyles.memoLine, artStyles.memoLineShort]} />
+      </View>
+      <Image
+        source={figmaAssets.illustrations.onboardingPencil}
+        style={artStyles.pencil}
+        contentFit="contain"
+      />
+    </View>
+  );
 }
 
 const SLIDES: Slide[] = [
   {
-    photo: HERO_PHOTOS.walk,
-    title: '나에게 맞는 취미,\n찾아드릴게요',
-    body: '12개의 질문으로 성향을 알아보고 딱 맞는 활동을 추천해요',
+    title: '새로운 즐거움\nFeellog와 함께',
+    sub: '취미를 찾고, 기록하고, 나누는 공간',
+    dotColor: colors.primary,
+    art: <ScissorsArt />,
   },
   {
-    photo: categoryPhoto('전시')!,
     title: '함께 나누는 즐거움,\n취향 공동체',
-    body: '같은 취향의 이웃들과 이야기를 나눠보세요',
+    sub: '정성스럽게 만든 결과물을 함께\n소통하며 공유해보세요.',
+    dotColor: colors.accentCoral,
+    art: <PeopleArt />,
   },
   {
-    photo: categoryPhoto('공예')!,
-    title: '좋아요 할수록\n더 잘 맞는 추천',
-    body: '마음에 드는 활동에 좋아요를 남기면 추천이 똑똑해져요',
+    title: '나만의 속도로 즐기는 기록',
+    sub: '차곡차곡 나만의 추억을 만듭니다.',
+    dotColor: colors.accentMint,
+    art: <PencilArt />,
   },
 ];
 
 export default function OnboardingScreen() {
   const scrollRef = useRef<ScrollView>(null);
-  const { isDesktop } = useBreakpoint();
   const [pageWidth, setPageWidth] = useState(MAX_CONTENT_WIDTH);
   const [index, setIndex] = useState(0);
   const isLast = index === SLIDES.length - 1;
 
   const onLayout = (e: LayoutChangeEvent) => {
     const w = e.nativeEvent.layout.width;
-    if (w > 0) setPageWidth(w);
+    if (w > 0 && w !== pageWidth) setPageWidth(w);
   };
-
-  // 창 크기 변경/데스크탑↔모바일 전환 후에도 스크롤 오프셋을 현재 인덱스에 재동기화
-  // (ScrollView가 리마운트되면 x=0으로 돌아가 Dots와 어긋나는 것 방지)
-  useEffect(() => {
-    if (!isDesktop) {
-      scrollRef.current?.scrollTo({ x: index * pageWidth, animated: false });
-    }
-    // index는 의도적으로 제외 — 사용자가 직접 넘길 때는 goNext/onScroll이 처리한다
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pageWidth, isDesktop]);
 
   const onScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
     const next = Math.round(e.nativeEvent.contentOffset.x / pageWidth);
     if (next >= 0 && next < SLIDES.length && next !== index) setIndex(next);
   };
 
-  const finish = async () => {
+  /** 프로필 만들기 — 인트로 완료 표시 후 프로필 설정으로 */
+  const toProfileSetup = async () => {
+    await setOnboardingSeen(true);
+    router.replace('/profile-setup');
+  };
+
+  /** 건너뛰기 — 인트로 완료 표시 후 홈(디사이더)으로 */
+  const skip = async () => {
     await setOnboardingSeen(true);
     router.replace('/');
   };
 
   const goNext = () => {
     if (isLast) {
-      void finish();
+      void toProfileSetup();
       return;
     }
     const next = index + 1;
@@ -90,67 +138,25 @@ export default function OnboardingScreen() {
     setIndex(next);
   };
 
-  if (isDesktop) {
-    return (
-      <Screen scroll maxWidth={CONTENT_WIDTH.dashboard} contentStyle={styles.deskContent}>
-        <View style={styles.deskHero}>
-          <AppText variant="h1" center>
-            필로그에 오신 것을 환영해요
-          </AppText>
-          <AppText variant="bodyLg" muted center style={styles.body}>
-            취미를 찾고, 기록하고, 나누는 공간이에요
-          </AppText>
-        </View>
-
-        <View style={styles.deskRow}>
-          {SLIDES.map((slide, i) => (
-            <View key={i} style={styles.deskCard}>
-              <Image source={slide.photo} style={styles.deskPhoto} contentFit="cover" />
-              <View style={styles.deskCardBody}>
-                <AppText variant="title" style={styles.title}>
-                  {slide.title}
-                </AppText>
-                <AppText variant="body" muted style={styles.body}>
-                  {slide.body}
-                </AppText>
-              </View>
-            </View>
-          ))}
-        </View>
-
-        <Button
-          label="시작하기"
-          fullWidth={false}
-          style={styles.deskStart}
-          onPress={() => void finish()}
-        />
-      </Screen>
-    );
-  }
-
   return (
     <Screen
-      edges={['top', 'bottom']}
       noPadding
       footer={
         <View style={styles.footer}>
-          <Dots count={SLIDES.length} activeIndex={index} />
-          <Button label={isLast ? '시작하기' : '다음'} onPress={goNext} />
+          <Dots count={SLIDES.length} activeIndex={index} activeColor={SLIDES[index].dotColor} />
+          <View style={styles.buttons}>
+            <Button label={isLast ? '프로필 만들기' : '다음으로'} onPress={goNext} />
+            <Button
+              label={isLast ? '나중에하기' : '건너뛰기'}
+              variant="secondary"
+              onPress={() => void skip()}
+            />
+          </View>
         </View>
       }
     >
       <View style={styles.header}>
-        <Pressable
-          onPress={finish}
-          accessibilityRole="button"
-          accessibilityLabel="건너뛰기"
-          hitSlop={12}
-          style={styles.skip}
-        >
-          <AppText variant="body" muted>
-            건너뛰기
-          </AppText>
-        </Pressable>
+        <FeellogLogo width={108} />
       </View>
 
       <View style={styles.pager} onLayout={onLayout}>
@@ -166,15 +172,13 @@ export default function OnboardingScreen() {
         >
           {SLIDES.map((slide, i) => (
             <View key={i} style={[styles.slide, { width: pageWidth }]}>
-              <View style={styles.photoWrap}>
-                <Image source={slide.photo} style={styles.photo} contentFit="cover" transition={150} />
-              </View>
+              <View style={styles.artArea}>{slide.art}</View>
               <View style={styles.copy}>
-                <AppText variant="h1" style={styles.title}>
+                <AppText variant="display" center>
                   {slide.title}
                 </AppText>
-                <AppText variant="bodyLg" muted style={styles.body}>
-                  {slide.body}
+                <AppText variant="bodyLg" muted center>
+                  {slide.sub}
                 </AppText>
               </View>
             </View>
@@ -187,82 +191,112 @@ export default function OnboardingScreen() {
 
 const styles = StyleSheet.create({
   header: {
-    height: 52,
-    justifyContent: 'center',
-    alignItems: 'flex-end',
     paddingHorizontal: spacing.lg,
-  },
-  skip: {
-    // 웹은 hitSlop이 무시되므로 실제 높이로 48dp 확보
-    minHeight: 48,
-    justifyContent: 'center',
-    paddingHorizontal: spacing.md,
+    paddingTop: spacing.md,
   },
   pager: {
     flex: 1,
   },
   slide: {
     flex: 1,
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing.sm,
-    gap: spacing.xl,
+    alignItems: 'center',
+    paddingHorizontal: spacing.lg,
   },
-  photoWrap: {
-    borderRadius: radius.xl,
-    overflow: 'hidden',
-    backgroundColor: colors.surfaceAlt,
-  },
-  photo: {
-    width: '100%',
-    aspectRatio: 4 / 3,
+  artArea: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   copy: {
-    gap: spacing.md,
-  },
-  title: {
-    lineHeight: 36,
-  },
-  body: {
-    lineHeight: 29,
+    gap: spacing.base,
+    paddingBottom: spacing.lg,
   },
   footer: {
     gap: spacing.lg,
-    paddingTop: spacing.sm,
-  },
-  // ── 데스크탑: 3장 펼침 ──
-  deskContent: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    gap: spacing.xxl,
-    paddingVertical: spacing.xxl,
-  },
-  deskHero: {
-    alignItems: 'center',
-    gap: spacing.md,
-  },
-  deskRow: {
-    flexDirection: 'row',
-    gap: spacing.xl,
     alignItems: 'stretch',
   },
-  deskCard: {
-    flex: 1,
-    overflow: 'hidden',
-    backgroundColor: colors.surface,
-    borderRadius: radius.xl,
-    borderWidth: 1,
-    borderColor: colors.borderOnWhite,
+  buttons: {
+    gap: spacing.base,
+    // Figma 버튼 폭 276/360 — 좌우 여백을 더해 근사
+    marginHorizontal: spacing.lg,
   },
-  deskPhoto: {
-    width: '100%',
-    aspectRatio: 3 / 2,
+});
+
+const artStyles = StyleSheet.create({
+  // ── 1장: 파란 원 + 가위 (Figma: 원 238 @x63,y117 / 가위 136x119 @x26,y279) ──
+  scissorsBox: {
+    width: 275,
+    height: 281,
   },
-  deskCardBody: {
-    padding: spacing.lg,
-    gap: spacing.sm,
+  blueCircle: {
+    position: 'absolute',
+    left: 37,
+    top: 0,
+    width: 238,
+    height: 238,
+    borderRadius: radius.pill,
+    backgroundColor: palette.bluePastel,
   },
-  deskStart: {
+  scissors: {
+    position: 'absolute',
+    left: 0,
+    top: 162,
+    width: 136,
+    height: 119,
+  },
+  // ── 2장: 코랄 카드 + 세 사람 (Figma 그룹 320x178, 카드 y+20 128) ──
+  peopleBox: {
+    width: 320,
+    maxWidth: '100%',
+    height: 179,
+  },
+  coralCard: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 20,
+    height: 128,
+    borderRadius: radius.md,
+    backgroundColor: palette.coralPastel,
+  },
+  people: {
+    position: 'absolute',
     alignSelf: 'center',
-    minWidth: 280,
+    top: 0,
+    width: 301,
+    height: 179,
+  },
+  // ── 3장: 민트 메모지(회전) + 흰 줄 + 연필 (Figma: 메모 228 @x61,y148 / 연필 149x146) ──
+  pencilBox: {
+    width: 272,
+    height: 262,
+  },
+  memo: {
+    position: 'absolute',
+    left: 0,
+    top: 16,
+    width: 228,
+    height: 228,
+    backgroundColor: palette.mintPastel,
+    transform: [{ rotate: '8deg' }],
+    paddingTop: spacing.xxxl,
+    paddingHorizontal: spacing.xl,
+    gap: spacing.xl,
+  },
+  memoLine: {
+    height: 2,
+    alignSelf: 'stretch',
+    backgroundColor: colors.surface,
+  },
+  memoLineShort: {
+    alignSelf: 'flex-start',
+    width: '55%',
+  },
+  pencil: {
+    position: 'absolute',
+    left: 120,
+    top: 72,
+    width: 149,
+    height: 146,
   },
 });

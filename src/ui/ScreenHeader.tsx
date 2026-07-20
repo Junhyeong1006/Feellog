@@ -1,12 +1,14 @@
 /**
- * ScreenHeader — 상단 바(뒤로가기 + 제목 + 우측 슬롯).
- * 뒤로 갈 곳이 없으면 홈으로 대체 이동. 시니어 터치 영역 확보.
+ * ScreenHeader — 상단 바 (v6 블루 DS).
+ * 좌측: 원형 뒤로가기(흰 원 + 파랑 보더 + 파랑 화살표 — Figma Icon/Back 스타일, 48dp).
+ * 중앙: 타이틀(Title 20/700). 우측: 슬롯(X·장바구니 등).
+ * 뒤로 갈 곳이 없으면 홈으로 대체 이동.
  */
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
 
-import { colors, spacing } from '@/tokens';
+import { colors, MIN_TOUCH_SIZE, radius, spacing } from '@/tokens';
 
 import { AppText } from './Text';
 
@@ -33,10 +35,10 @@ export function ScreenHeader({ title, hideBack = false, onBack, right }: ScreenH
             onPress={handleBack}
             accessibilityRole="button"
             accessibilityLabel="뒤로가기"
-            hitSlop={10}
-            style={styles.backBtn}
+            hitSlop={spacing.sm}
+            style={({ pressed }) => [styles.backBtn, pressed && styles.pressed]}
           >
-            <Ionicons name="chevron-back" size={28} color={colors.textPrimary} />
+            <Ionicons name="arrow-back" size={24} color={colors.primary} />
           </Pressable>
         )}
       </View>
@@ -56,13 +58,14 @@ export function ScreenHeader({ title, hideBack = false, onBack, right }: ScreenH
 
 const styles = StyleSheet.create({
   bar: {
-    height: 52,
+    minHeight: MIN_TOUCH_SIZE + spacing.sm,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
   },
   side: {
-    minWidth: 48,
+    minWidth: MIN_TOUCH_SIZE + spacing.sm,
     justifyContent: 'center',
   },
   right: {
@@ -73,9 +76,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   backBtn: {
-    width: 48,
-    height: 48,
+    width: MIN_TOUCH_SIZE,
+    height: MIN_TOUCH_SIZE,
+    borderRadius: radius.pill,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  pressed: {
+    opacity: 0.75,
   },
 });

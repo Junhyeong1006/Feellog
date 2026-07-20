@@ -103,7 +103,7 @@ export default function ConsentScreen() {
                 style={styles.itemCheckbox}
                 label={
                   <AppText variant="body">
-                    <AppText variant="body" color={item.required ? colors.primaryInk : colors.textSecondary} weight="semibold">
+                    <AppText variant="body" color={item.required ? colors.primary : colors.textSecondary} weight="semibold">
                       {item.required ? '[필수] ' : '[선택] '}
                     </AppText>
                     {item.title}
@@ -156,7 +156,7 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.base,
     fontSize: 16,
     fontWeight: '600',
-    color: colors.primaryInk,
+    color: colors.primary,
     textDecorationLine: 'underline',
     lineHeight: 48, // 웹 hitSlop 미지원 — 줄 높이로 48dp 터치 확보
     paddingHorizontal: spacing.md,

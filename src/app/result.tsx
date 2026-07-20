@@ -1,282 +1,277 @@
 /**
- * 성향 분석 결과 (v5) — 유형 대표 사진 히어로(텍스트온포토) + 레이더 + 5축 막대 + 공유.
- * 답변(values)을 쿼리로 받아 순수 함수 diagnose로 재계산(무상태·딥링크 안전) → 그대로 공유 링크가 된다.
- * 데스크탑: 히어로 아래 [레이더 카드 | 막대+보조성향 카드] 2컬럼.
+ * 성향 테스트 결과 (v6 — Figma 334:1260 블루 리스킨).
+ * 파랑 배경 + 흰 라운드 카드: 유형 이미지 → TYPE 0N 배지 → 유형명/부제/설명 → 공유 → 재테스트 CTA.
+ * usePrefs 기반(로컬 1차) — 딥링크로 진입했는데 결과가 없으면 /test로 리다이렉트.
  */
+import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Redirect, router, useLocalSearchParams } from 'expo-router';
+import { Redirect, router } from 'expo-router';
 import { useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 
-import { AxisChart } from '@/components/AxisChart';
-import { typePhoto } from '@/components/categoryPhoto';
-import { RadarChart } from '@/components/RadarChart';
-import {
-  diagnose,
-  QUESTIONS,
-  SUB_TRAIT_META,
-  TYPE_META,
-  type Answer,
-  type AnswerValue,
-} from '@/core';
-import { useBreakpoint } from '@/hooks/useBreakpoint';
+import { figmaAssets } from '@/assets/figmaAssets';
+import { TYPE_PROFILES, type MainType } from '@/core';
+import { usePrefs } from '@/hooks/usePrefs';
 import { track } from '@/lib/analytics';
-import { useAuth } from '@/providers/AuthProvider';
-import { colors, CONTENT_WIDTH, MAX_CONTENT_WIDTH, photoOverlay, radius, spacing } from '@/tokens';
+import { clearTestProgress } from '@/state/testProgress';
+import { colors, MIN_TOUCH_SIZE, palette, radius, shadows, spacing } from '@/tokens';
 import { absoluteUrl, shareContent } from '@/utils/share';
-import { AppText, Button, Card, Screen } from '@/ui';
+import { AppText, Screen } from '@/ui';
 
-function toAnswerValue(n: number): AnswerValue {
-  if (Number.isNaN(n)) return 0;
-  const c = Math.max(-2, Math.min(2, Math.round(n)));
-  return c as AnswerValue;
-}
+/** 유형별 결과 대표 이미지 */
+const TYPE_IMAGES: Record<MainType, number> = {
+  T01: require('../../assets/photos/category-hiking.jpg'),
+  T02: require('../../assets/photos/category-garden.jpg'),
+  T03: require('../../assets/photos/community-pottery.jpg'),
+  T04: require('../../assets/photos/category-exhibition.jpg'),
+  T05: require('../../assets/photos/category-cooking.jpg'),
+  T06: figmaAssets.photos.resultCalligraphy,
+};
 
 export default function ResultScreen() {
-  const { session } = useAuth();
-  const { isDesktop, width } = useBreakpoint();
+  const { prefs, loading } = usePrefs();
   const [shareNote, setShareNote] = useState<string | null>(null);
-  const params = useLocalSearchParams<{ v?: string | string[] }>();
-  const raw = Array.isArray(params.v) ? params.v[0] : params.v;
 
-  if (!raw) return <Redirect href="/test" />;
+  if (loading) {
+    return (
+      <Screen background={colors.primary}>
+        <View style={styles.loading}>
+          <ActivityIndicator color={palette.white} />
+        </View>
+      </Screen>
+    );
+  }
 
-  const parts = raw.split(',');
-  const answers: Answer[] = QUESTIONS.map((q, i) => ({ q: q.id, value: toAnswerValue(Number(parts[i])) }));
-  const result = diagnose(answers);
+  if (!prefs) return <Redirect href="/test" />;
 
-  const type = TYPE_META[result.mainType];
-  const sub = result.subTrait ? SUB_TRAIT_META[result.subTrait] : null;
+  const type = TYPE_PROFILES[prefs.mainType];
+  const typeNo = prefs.mainType.replace('T', ''); // 'T04' → '04'
 
-  // 레이더가 카드 내부 폭을 넘지 않게 렌더 폭 제한.
-  // 데스크탑 2컬럼: 컬럼 = (wide 920 - 화면패딩 48 - 컬럼갭 24)/2, 카드 패딩(lg) 40 제외 ≈ 384
-  const radarMaxWidth = isDesktop
-    ? (CONTENT_WIDTH.wide - spacing.xl * 2 - spacing.xl) / 2 - spacing.lg * 2
-    : Math.min(width, MAX_CONTENT_WIDTH) - spacing.xl * 2 - spacing.lg * 2;
+  const onBack = () => {
+    if (router.canGoBack()) router.back();
+    else router.replace('/');
+  };
 
   const onShare = async () => {
     track('result_share');
     const outcome = await shareContent({
       title: `나는 ${type.label}!`,
-      message: `필로그 성향 테스트 결과, 나는 "${type.label}"이에요. 당신의 여가 유형도 알아보세요!`,
-      url: absoluteUrl(`/result?v=${raw}`),
+      message: `필로그 여가 스타일 테스트 결과, 나는 "${type.label}(${type.subtitle})"이에요. 당신의 여가 스타일도 알아보세요!`,
+      url: absoluteUrl('/test'),
     });
-    if (outcome === 'copied') setShareNote('링크를 복사했어요. 원하는 곳에 붙여넣어 공유해 보세요!');
+    if (outcome === 'copied') setShareNote('링크를 복사했어요. 원하는 곳에 붙여넣어 보세요.');
     else if (outcome === 'failed') setShareNote('이 환경에서는 공유하기가 지원되지 않아요.');
-    else setShareNote(null); // shared/dismissed(시트 닫음)는 안내 불필요
+    else setShareNote(null); // shared/dismissed는 안내 불필요
   };
 
-  // 유형 대표 사진 히어로(텍스트온포토)
-  const hero = (
-    <View style={[styles.hero, isDesktop && styles.heroDesk]}>
-      <Image source={typePhoto(result.mainType)} style={StyleSheet.absoluteFill} contentFit="cover" transition={200} />
-      <LinearGradient colors={photoOverlay.bottom} locations={[0.25, 0.55, 1]} style={StyleSheet.absoluteFill} />
-      <View style={styles.heroCopy}>
-        <AppText variant="caption" weight="bold" color={colors.onPhotoSoft}>
-          나의 여가 유형
-        </AppText>
-        <AppText variant="display" color={colors.onPhoto} style={styles.typeName}>
-          {type.label}
-        </AppText>
-        {sub && (
-          <View style={styles.subChip}>
-            <AppText variant="caption" weight="bold" color={colors.onPhoto}>
-              보조 성향 · {sub.label}
-            </AppText>
-          </View>
-        )}
-      </View>
-    </View>
-  );
-
-  const radarCard = (
-    <Card padding="lg" style={styles.chartCard}>
-      <AppText variant="title">한눈에 보기</AppText>
-      <RadarChart vector={result.vector} maxWidth={radarMaxWidth} />
-    </Card>
-  );
-
-  const detailCards = (
-    <View style={styles.detailCol}>
-      <Card padding="lg" style={styles.chartCard}>
-        <AppText variant="title" style={styles.chartTitle}>
-          나의 성향 프로필
-        </AppText>
-        <AxisChart vector={result.vector} />
-      </Card>
-
-      {sub && (
-        <Card padding="lg">
-          <AppText variant="title">{sub.label}</AppText>
-          <AppText variant="body" muted style={styles.subBody}>
-            {sub.tagline}
-          </AppText>
-        </Card>
-      )}
-    </View>
-  );
-
-  const guestNote = !session && (
-    <AppText variant="caption" muted center style={styles.guestNote}>
-      로그인하면 이 결과가 저장되고, 좋아요에 따라 추천이 더 정확해져요.
-    </AppText>
-  );
+  const onRetest = async () => {
+    await clearTestProgress();
+    router.replace('/test/run');
+  };
 
   return (
-    <Screen
-      scroll
-      noPadding
-      edges={isDesktop ? undefined : ['bottom']}
-      maxWidth={isDesktop ? CONTENT_WIDTH.wide : undefined}
-      contentStyle={styles.content}
-      footer={
-        isDesktop ? undefined : (
-          <View style={styles.footer}>
-            <Button label="활동 추천 받기" onPress={() => router.replace('/reco')} />
-            <Button label="결과 공유하기" variant="outline" onPress={onShare} />
-            <Button label="다시 검사하기" variant="ghost" onPress={() => router.replace('/test/run')} />
-          </View>
-        )
-      }
-    >
-      {hero}
+    <Screen scroll background={colors.primary} contentStyle={styles.content}>
+      {/* 상단 바 */}
+      <View style={styles.header}>
+        <Pressable
+          onPress={onBack}
+          accessibilityRole="button"
+          accessibilityLabel="뒤로가기"
+          hitSlop={spacing.sm}
+          style={({ pressed }) => [styles.backBtn, pressed && styles.pressedDim]}
+        >
+          <Ionicons name="arrow-back" size={24} color={palette.white} />
+        </Pressable>
+        <View style={styles.headerTitleWrap}>
+          <AppText variant="body2" color={palette.white}>
+            나의 여가 스타일 결과
+          </AppText>
+        </View>
+        <View style={styles.headerSpacer} />
+      </View>
 
-      <View style={styles.body}>
-        <AppText variant="bodyLg" style={styles.tagline}>
-          {type.tagline}
+      {/* 메인 카드 */}
+      <View style={styles.card}>
+        {/* 유형 대표 이미지 */}
+        <View style={styles.illustCard}>
+          <Image
+            source={TYPE_IMAGES[prefs.mainType]}
+            style={StyleSheet.absoluteFill}
+            contentFit="cover"
+            transition={150}
+            accessibilityLabel={`${type.label} 대표 이미지`}
+          />
+        </View>
+
+        {/* TYPE 배지 */}
+        <View style={styles.badge}>
+          <AppText variant="caption" weight="medium" color={colors.textSecondary}>
+            TYPE {typeNo}
+          </AppText>
+        </View>
+
+        {/* 유형명 + 부제 */}
+        <View style={styles.titleBlock}>
+          <AppText variant="h3" weight="bold" center>
+            {type.label}
+          </AppText>
+          <AppText variant="h3" weight="medium" center color={colors.primaryPressed}>
+            {type.subtitle}
+          </AppText>
+        </View>
+
+        {/* 설명 */}
+        <AppText variant="bodyLg" weight="regular" center color={colors.textSecondary} style={styles.desc}>
+          {type.description}이에요. 좋아하실 만한 활동을 골라 추천해 드릴게요.
         </AppText>
 
-        {isDesktop ? (
-          <View style={styles.columns}>
-            <View style={styles.col}>{radarCard}</View>
-            <View style={styles.col}>{detailCards}</View>
-          </View>
-        ) : (
-          <View style={styles.stack}>
-            {radarCard}
-            {detailCards}
-          </View>
-        )}
-
-        {shareNote && (
-          <AppText variant="caption" center color={colors.primaryInk} style={styles.shareNote}>
+        {/* 공유 */}
+        <Pressable
+          onPress={onShare}
+          accessibilityRole="button"
+          accessibilityLabel="결과 공유하기"
+          style={({ pressed }) => [styles.shareBtn, pressed && styles.pressedDim]}
+        >
+          <Ionicons name="share-social-outline" size={20} color={colors.textSecondary} />
+        </Pressable>
+        {shareNote != null && (
+          <AppText variant="caption" center muted style={styles.shareNote}>
             {shareNote}
           </AppText>
         )}
-        {guestNote}
 
-        {isDesktop && (
-          <View style={styles.deskActions}>
-            <Button
-              label="활동 추천 받기"
-              fullWidth={false}
-              style={styles.deskAction}
-              onPress={() => router.replace('/reco')}
-            />
-            <Button
-              label="결과 공유하기"
-              variant="outline"
-              fullWidth={false}
-              style={styles.deskAction}
-              onPress={onShare}
-            />
-            <Button
-              label="다시 검사하기"
-              variant="ghost"
-              fullWidth={false}
-              style={styles.deskAction}
-              onPress={() => router.replace('/test/run')}
-            />
-          </View>
-        )}
+        {/* 재테스트 CTA */}
+        <Pressable
+          onPress={onRetest}
+          accessibilityRole="button"
+          accessibilityLabel="테스트 다시하기"
+          style={({ pressed }) => [styles.cta, pressed && styles.ctaPressed]}
+        >
+          <AppText variant="bodyLg" weight="medium" color={palette.white}>
+            테스트 다시하기
+          </AppText>
+          <Ionicons name="arrow-forward" size={18} color={palette.white} />
+        </Pressable>
       </View>
+
+      {/* 추천 보러 가기 — 결과가 실제 추천으로 이어지도록(기능 완결) */}
+      <Pressable
+        onPress={() => router.replace('/')}
+        accessibilityRole="button"
+        accessibilityLabel="추천 활동 보러 가기"
+        style={({ pressed }) => [styles.homeLink, pressed && styles.pressedDim]}
+      >
+        <AppText variant="body2" color={palette.white}>
+          추천 활동 보러 가기
+        </AppText>
+      </Pressable>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
   content: {
-    paddingBottom: spacing.xl,
+    flexGrow: 1,
+    paddingBottom: spacing.xxxl,
   },
-  hero: {
-    height: 320,
-    justifyContent: 'flex-end',
-  },
-  heroDesk: {
-    height: 380,
-    borderRadius: radius.xl,
-    overflow: 'hidden',
-    marginTop: spacing.lg,
-  },
-  heroCopy: {
-    padding: spacing.xl,
-    gap: spacing.sm,
-    alignItems: 'flex-start',
-  },
-  typeName: {
-    marginTop: 2,
-  },
-  subChip: {
-    minHeight: 34,
-    paddingHorizontal: spacing.base,
-    borderRadius: radius.pill,
-    // 흰 반투명 칩은 밝은 사진에서 AA 미달 — 다크 글래스 + 흰 텍스트(접근성 리뷰)
-    backgroundColor: colors.photoChip,
+  loading: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: spacing.xs,
   },
-  body: {
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing.lg,
-    gap: spacing.xl,
-  },
-  tagline: {
-    lineHeight: 31,
-  },
-  columns: {
+  header: {
     flexDirection: 'row',
-    gap: spacing.xl,
-    alignItems: 'flex-start',
+    alignItems: 'center',
+    minHeight: 64,
   },
-  col: {
+  backBtn: {
+    width: MIN_TOUCH_SIZE,
+    height: MIN_TOUCH_SIZE,
+    borderRadius: radius.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerTitleWrap: {
     flex: 1,
+    alignItems: 'center',
   },
-  stack: {
-    gap: spacing.lg,
+  headerSpacer: {
+    width: MIN_TOUCH_SIZE,
   },
-  detailCol: {
-    gap: spacing.lg,
+  pressedDim: {
+    opacity: 0.7,
   },
-  chartCard: {
-    gap: spacing.lg,
-    alignItems: 'stretch',
+  card: {
+    marginTop: spacing.base,
+    backgroundColor: colors.surface,
+    borderRadius: 40, // 스펙 334-1260: r40
+    padding: spacing.xxl,
+    alignItems: 'center',
+    ...shadows.raised,
   },
-  chartTitle: {
-    marginBottom: spacing.xs,
+  illustCard: {
+    alignSelf: 'stretch',
+    height: 144,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.divider,
+    overflow: 'hidden',
+    backgroundColor: colors.surfaceInset,
   },
-  subBody: {
-    lineHeight: 26,
-    marginTop: spacing.xs,
+  badge: {
+    marginTop: spacing.xl,
+    minHeight: 29,
+    paddingHorizontal: spacing.base,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceInset,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  guestNote: {
-    paddingHorizontal: spacing.lg,
-    lineHeight: 22,
+  titleBlock: {
+    marginTop: spacing.base,
+    gap: spacing.sm,
+    alignItems: 'center',
+  },
+  desc: {
+    marginTop: spacing.base,
+    lineHeight: 29,
+  },
+  shareBtn: {
+    marginTop: spacing.xl,
+    width: MIN_TOUCH_SIZE,
+    height: MIN_TOUCH_SIZE,
+    borderRadius: radius.pill,
+    backgroundColor: colors.surfaceInset,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   shareNote: {
-    lineHeight: 22,
+    marginTop: spacing.sm,
   },
-  deskActions: {
+  cta: {
+    marginTop: spacing.base,
+    alignSelf: 'stretch',
+    minHeight: 64,
+    borderRadius: radius.pill,
+    backgroundColor: colors.primaryPressed,
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.md,
-    paddingBottom: spacing.lg,
+    gap: spacing.sm,
+    ...shadows.cta,
   },
-  deskAction: {
-    minWidth: 200,
+  ctaPressed: {
+    opacity: 0.9,
   },
-  footer: {
-    gap: spacing.xs,
+  homeLink: {
+    marginTop: spacing.xl,
+    alignSelf: 'center',
+    minHeight: MIN_TOUCH_SIZE,
+    paddingHorizontal: spacing.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

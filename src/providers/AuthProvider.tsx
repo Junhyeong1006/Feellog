@@ -21,8 +21,8 @@ import { getSupabase, isSupabaseConfigured } from '@/api/supabase';
 import { identify } from '@/lib/analytics';
 import { useFontScale } from '@/providers/FontScaleProvider';
 import { getGuest, setGuest as persistGuest } from '@/state/appFlags';
-import { setRecoFilter, EMPTY_FILTER } from '@/state/recoFilter';
-import { clearLocalTaste } from '@/state/tasteCache';
+import { clearLocalCollections } from '@/state/localCollections';
+import { clearLocalPrefs } from '@/state/prefsCache';
 import { clearTestProgress } from '@/state/testProgress';
 
 interface AuthContextValue {
@@ -124,9 +124,9 @@ export function AuthProvider({ children }: PropsWithChildren) {
     // 공용 기기 대비: 이전 사용자의 취향/테스트 진행/필터가 다음 사용자에게 노출되지 않게 정리
     await Promise.all([
       persistGuest(false),
-      clearLocalTaste(),
+      clearLocalPrefs(),
       clearTestProgress(),
-      setRecoFilter(EMPTY_FILTER),
+      clearLocalCollections(),
     ]);
   }, []);
 

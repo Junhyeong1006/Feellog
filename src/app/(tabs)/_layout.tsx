@@ -1,41 +1,81 @@
 /**
- * 탭 내비게이션 — 홈 · 추천 · 커뮤니티 · 마이.
- * 모바일(기본): 하단 탭바. 데스크탑 웹(≥1024px): 좌측 사이드바 + 탭바 숨김.
- * 같은 <Tabs> 내비게이터를 유지한 채 크롬만 바꿔서 리사이즈해도 화면 상태가 보존된다.
- * 시니어를 위해 라벨/터치 영역을 넉넉히.
+ * 탭 내비게이션 (v6) — 메인 · 기록 · 소통 · 마이.
+ * 디자인: 플로팅 라운드 탭바(흰 배경, 상단 라운드, 옅은 그림자),
+ * 활성 탭 = 연블루 원형 필 + 블루 아이콘/라벨, 비활성 = 뉴트럴.
  *
  * 게이트: 부팅 디사이더(index)만으로는 딥링크(/home 직접 진입)를 못 막으므로
- * 여기서도 로그인/게스트·필수 동의를 검사한다(정적 export는 모든 라우트가 직접 진입 가능).
+ * 여기서도 로그인/게스트를 검사한다(정적 export는 모든 라우트가 직접 진입 가능).
  */
 import { Ionicons } from '@expo/vector-icons';
 import { Redirect, Tabs } from 'expo-router';
-import { ActivityIndicator, Platform, StyleSheet, View, type ColorValue } from 'react-native';
+import { ActivityIndicator, Platform, Pressable, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+/** expo-router Tabs가 넘겨주는 탭바 props의 최소 형태(BottomTabBarProps 로컬 정의 —
+ * @react-navigation/bottom-tabs가 루트에 호이스팅되지 않아 타입만 직접 기술) */
+interface TabBarProps {
+  state: { index: number; routes: { key: string; name: string }[] };
+  navigation: {
+    emit: (e: { type: string; target?: string; canPreventDefault?: boolean }) => { defaultPrevented: boolean };
+    navigate: (name: string) => void;
+  };
+}
 
-import { Sidebar } from '@/components/Sidebar';
-import { useBreakpoint } from '@/hooks/useBreakpoint';
 import { useAuth } from '@/providers/AuthProvider';
-import { useFontScale } from '@/providers/FontScaleProvider';
-import { colors, fontFamily } from '@/tokens';
+import { colors, MAX_CONTENT_WIDTH, radius, shadows, spacing } from '@/tokens';
+import { AppText } from '@/ui';
 
-/** 활성=filled / 비활성=outline 스왑(색 변화 + 형태 변화 이중 신호 — 저시력 대응) */
-function TabIcon({
-  name,
-  focused,
-  color,
-}: {
-  name: 'home' | 'sparkles' | 'chatbubbles' | 'person';
-  focused: boolean;
-  color: ColorValue;
-}) {
-  return <Ionicons name={focused ? name : (`${name}-outline` as const)} size={26} color={color} />;
+const TAB_META: Record<string, { label: string; icon: keyof typeof Ionicons.glyphMap; iconActive: keyof typeof Ionicons.glyphMap }> = {
+  home: { label: '메인', icon: 'home-outline', iconActive: 'home' },
+  log: { label: '기록', icon: 'pencil-outline', iconActive: 'pencil' },
+  community: { label: '소통', icon: 'people-outline', iconActive: 'people' },
+  my: { label: '마이', icon: 'person-outline', iconActive: 'person' },
+};
+
+function FloatingTabBar({ state, navigation }: TabBarProps) {
+  const insets = useSafeAreaInsets();
+  return (
+    <View style={[styles.barWrap, { paddingBottom: Math.max(insets.bottom, spacing.sm) }]}>
+      <View style={styles.bar}>
+        {state.routes.map((route, index) => {
+          const meta = TAB_META[route.name];
+          if (!meta) return null;
+          const focused = state.index === index;
+          return (
+            <Pressable
+              key={route.key}
+              onPress={() => {
+                const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
+                if (!focused && !event.defaultPrevented) navigation.navigate(route.name);
+              }}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: focused }}
+              accessibilityLabel={meta.label}
+              style={styles.item}
+            >
+              <View style={[styles.iconWrap, focused && styles.iconWrapActive]}>
+                <Ionicons
+                  name={focused ? meta.iconActive : meta.icon}
+                  size={24}
+                  color={focused ? colors.primary : colors.textSecondary}
+                />
+              </View>
+              <AppText
+                variant="small"
+                weight={focused ? 'bold' : 'regular'}
+                color={focused ? colors.primary : colors.textSecondary}
+              >
+                {meta.label}
+              </AppText>
+            </Pressable>
+          );
+        })}
+      </View>
+    </View>
+  );
 }
 
 export default function TabsLayout() {
-  const { isDesktop } = useBreakpoint();
-  const { loading, session, profile, profileLoading, isAuthedOrGuest } = useAuth();
-  const { scale } = useFontScale();
-  // '앱 전체 글씨' 약속 이행 — 탭 라벨도 스케일(내비 폭 보호를 위해 1.3배 캡)
-  const labelSize = Math.round(16 * Math.min(scale, 1.3));
+  const { loading, session, profileLoading, isAuthedOrGuest } = useAuth();
 
   // 인증 상태 파악 전에는 판단 보류(깜빡임/오리다이렉트 방지)
   if (loading || (session && profileLoading)) {
@@ -46,54 +86,17 @@ export default function TabsLayout() {
     );
   }
   if (!isAuthedOrGuest) return <Redirect href="/login" />;
-  if (session && profile && !profile.consented_at) return <Redirect href="/consent" />;
 
   return (
-    <View style={styles.row}>
-      {isDesktop && <Sidebar />}
-      <View style={styles.content}>
-        <Tabs
-          tabBar={isDesktop ? () => null : undefined}
-          screenOptions={{
-            headerShown: false,
-            tabBarActiveTintColor: colors.primaryInk,
-            tabBarInactiveTintColor: colors.textSecondary,
-            tabBarStyle: styles.bar,
-            tabBarLabelStyle: [styles.label, { fontSize: labelSize }],
-            tabBarItemStyle: styles.item,
-          }}
-        >
-          <Tabs.Screen
-            name="home"
-            options={{
-              title: '홈',
-              tabBarIcon: ({ focused, color }) => <TabIcon name="home" focused={focused} color={color} />,
-            }}
-          />
-          <Tabs.Screen
-            name="reco"
-            options={{
-              title: '추천',
-              tabBarIcon: ({ focused, color }) => <TabIcon name="sparkles" focused={focused} color={color} />,
-            }}
-          />
-          <Tabs.Screen
-            name="community"
-            options={{
-              title: '커뮤니티',
-              tabBarIcon: ({ focused, color }) => <TabIcon name="chatbubbles" focused={focused} color={color} />,
-            }}
-          />
-          <Tabs.Screen
-            name="my"
-            options={{
-              title: '마이',
-              tabBarIcon: ({ focused, color }) => <TabIcon name="person" focused={focused} color={color} />,
-            }}
-          />
-        </Tabs>
-      </View>
-    </View>
+    <Tabs
+      tabBar={(props) => <FloatingTabBar {...(props as unknown as TabBarProps)} />}
+      screenOptions={{ headerShown: false }}
+    >
+      <Tabs.Screen name="home" options={{ title: '메인' }} />
+      <Tabs.Screen name="log" options={{ title: '기록' }} />
+      <Tabs.Screen name="community" options={{ title: '소통' }} />
+      <Tabs.Screen name="my" options={{ title: '마이' }} />
+    </Tabs>
   );
 }
 
@@ -104,28 +107,36 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: colors.background,
   },
-  row: {
-    flex: 1,
-    flexDirection: 'row',
-    backgroundColor: colors.background,
-  },
-  content: {
-    flex: 1,
+  barWrap: {
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: radius.xxl,
+    borderTopRightRadius: radius.xxl,
+    ...shadows.floating,
+    // 웹앱 컬럼과 동일 폭으로 중앙 정렬
+    width: '100%',
+    maxWidth: MAX_CONTENT_WIDTH,
+    alignSelf: 'center',
   },
   bar: {
-    backgroundColor: colors.surface,
-    borderTopColor: colors.border,
-    borderTopWidth: 1,
-    height: Platform.OS === 'web' ? 74 : undefined,
-    paddingTop: 6,
+    flexDirection: 'row',
+    paddingTop: spacing.sm,
+    paddingHorizontal: spacing.md,
   },
   item: {
-    paddingVertical: 4,
+    flex: 1,
+    alignItems: 'center',
+    gap: 2,
+    minHeight: Platform.OS === 'web' ? 64 : 60,
+    paddingVertical: spacing.xs,
   },
-  label: {
-    fontFamily: fontFamily.base,
-    // fontSize는 위에서 폰트스케일 반영(기본 16 — 캡션 하한 준수)
-    fontWeight: '600',
-    marginBottom: Platform.OS === 'web' ? 6 : 2,
+  iconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: radius.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  iconWrapActive: {
+    backgroundColor: colors.primaryTint,
   },
 });

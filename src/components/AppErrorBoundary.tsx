@@ -1,13 +1,11 @@
 /**
- * AppErrorBoundary — 렌더 중 예외를 잡아 시니어 친화 안내 + 다시 시도 버튼(S8).
- * 루트 _layout에서 expo-router의 ErrorBoundary export로 연결한다.
+ * AppErrorBoundary — 렌더 중 예외를 잡아 안내 + 다시 시도 버튼.
+ * 루트 _layout에서 expo-router의 ErrorBoundary export로 연결한다. (v6 토큰)
  */
 import { StyleSheet, View } from 'react-native';
 
 import { colors, radius, spacing } from '@/tokens';
 import { AppText, Button } from '@/ui';
-
-import { SpotIllustration } from './EmptyState';
 
 export interface AppErrorFallbackProps {
   error: Error;
@@ -18,17 +16,14 @@ export function AppErrorFallback({ error, retry }: AppErrorFallbackProps) {
   return (
     <View style={styles.root}>
       <View style={styles.card}>
-        <View style={styles.spot}>
-          <SpotIllustration kind="cloud" size={104} />
-        </View>
-        <AppText variant="h2" center>
+        <AppText variant="h3" center>
           잠시 문제가 생겼어요
         </AppText>
-        <AppText muted center style={styles.body}>
+        <AppText variant="body" color={colors.textSecondary} center style={styles.body}>
           불편을 드려 죄송해요.{'\n'}아래 버튼을 눌러 다시 시도해 주세요.
         </AppText>
         {__DEV__ && (
-          <AppText variant="caption" muted style={styles.debug} numberOfLines={4}>
+          <AppText variant="small" color={colors.textMuted} style={styles.debug} numberOfLines={4}>
             {error.message}
           </AppText>
         )}
@@ -50,20 +45,19 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 420,
     backgroundColor: colors.surface,
-    borderRadius: radius.xxl,
+    borderRadius: radius.xl,
+    borderWidth: 1,
+    borderColor: colors.border,
     padding: spacing.xxl,
     gap: spacing.lg,
     alignItems: 'stretch',
-  },
-  spot: {
-    alignItems: 'center',
   },
   body: {
     lineHeight: 26,
   },
   debug: {
     backgroundColor: colors.surfaceInset,
-    borderRadius: radius.md,
+    borderRadius: radius.sm,
     padding: spacing.md,
   },
 });

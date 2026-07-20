@@ -1,58 +1,53 @@
 /**
- * 매칭 — 사용자 5축 벡터 ↔ 활동 5축 태그. 하드필터 → 유사도 점수(0~100) → 정렬.
- * (개발계획서 2.3 참조) 순수 TS.
+ * 추천 매칭 (엔진 v2) — 사용자 현재 7축 벡터 ↔ 활동 7축 점수.
+ * 점수 = 100 × (1 - 정규화 L1 거리). 축당 최대 차이 50(-25↔+25)이므로
+ * 완전 반대 성향이면 0, 동일하면 100. 필터(신체 부담 등)는 성향과 분리(정책 §5).
  */
-import { AXES, AXIS_WEIGHTS } from './config';
-import { weightedDistance } from './classify';
-import type { Activity, AxisVector, RecoFilter } from './types';
+import { AXES, type Activity, type AxisVector } from './types';
 
-/** 가중 유클리드 거리의 이론적 최대값 (각 축 최대 200 차이) */
-const MAX_DISTANCE = 200 * Math.sqrt(AXES.reduce((s, a) => s + AXIS_WEIGHTS[a], 0));
-
-/** 사용자↔활동 매칭 점수 0~100 (가까울수록 높음) */
-export function matchScore(user: AxisVector, activityVector: AxisVector): number {
-  const d = weightedDistance(user, activityVector);
-  return Math.round(clamp01(1 - d / MAX_DISTANCE) * 100);
+export interface ScoredActivity<A extends Activity = Activity> {
+  activity: A;
+  /** 0~100 매칭 점수 */
+  score: number;
 }
 
-function clamp01(v: number): number {
-  return v < 0 ? 0 : v > 1 ? 1 : v;
+const MAX_TOTAL_DIFF = 50 * 7;
+
+/** 사용자 벡터와 활동 벡터의 매칭 점수(0~100, 정수) */
+export function matchScore(user: AxisVector, activity: AxisVector): number {
+  let diff = 0;
+  for (const axis of AXES) {
+    diff += Math.abs(user[axis] - activity[axis]);
+  }
+  return Math.round(100 * (1 - diff / MAX_TOTAL_DIFF));
 }
 
-/**
- * 하드필터 통과 여부 (지역/예산/시간/강도).
- * 엄격 의미론(§2.3.2): 필터가 켜져 있는데 활동의 해당 값이 null(미입력)이면 제외한다.
- * — '무료만'을 골랐는데 가격 미입력 유료 클래스가 '무료'로 보이는 사고 방지.
- */
-export function passesFilter(activity: Activity, filter?: RecoFilter): boolean {
+export interface MatchFilter {
+  /** 카테고리(원본 카테고리명) 제한 — null/빈 배열이면 전체 */
+  categories?: readonly string[] | null;
+  /** 신체 부담 상한(1~5) — null이면 제한 없음 */
+  maxPhysicalBurden?: number | null;
+}
+
+export function passesFilter(activity: Activity, filter?: MatchFilter | null): boolean {
   if (!filter) return true;
-  if (filter.regionSido != null) {
-    if (activity.regionSido == null || activity.regionSido !== filter.regionSido) return false;
+  if (filter.categories && filter.categories.length > 0 && !filter.categories.includes(activity.category)) {
+    return false;
   }
-  if (filter.maxPrice != null) {
-    if (activity.price == null || activity.price > filter.maxPrice) return false;
-  }
-  if (filter.maxDurationMin != null) {
-    if (activity.durationMin == null || activity.durationMin > filter.maxDurationMin) return false;
-  }
-  if (filter.maxIntensity != null) {
-    if (activity.intensity == null || activity.intensity > filter.maxIntensity) return false;
+  if (filter.maxPhysicalBurden != null && activity.physicalBurden > filter.maxPhysicalBurden) {
+    return false;
   }
   return true;
 }
 
-/**
- * 추천: 필터 → 점수 → 내림차순 정렬. limit로 상위 N개.
- * 제네릭 T로 입력 활동의 확장 필드(제목/이미지 등)를 결과까지 그대로 보존한다.
- */
-export function recommend<T extends Activity>(
+/** 활동 목록을 매칭 점수 내림차순으로 정렬(동점은 id 오름차순 — 결정적) */
+export function rankActivities<A extends Activity>(
   user: AxisVector,
-  activities: T[],
-  opts?: { filter?: RecoFilter; limit?: number },
-): { activity: T; score: number }[] {
-  const results = activities
-    .filter((a) => passesFilter(a, opts?.filter))
-    .map((activity) => ({ activity, score: matchScore(user, activity.vector) }))
-    .sort((a, b) => b.score - a.score);
-  return opts?.limit != null ? results.slice(0, opts.limit) : results;
+  activities: readonly A[],
+  filter?: MatchFilter | null,
+): ScoredActivity<A>[] {
+  return activities
+    .filter((a) => passesFilter(a, filter))
+    .map((a) => ({ activity: a, score: matchScore(user, a.vector) }))
+    .sort((x, y) => y.score - x.score || (x.activity.id < y.activity.id ? -1 : 1));
 }

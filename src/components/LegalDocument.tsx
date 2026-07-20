@@ -5,8 +5,7 @@
  */
 import { ScrollView, StyleSheet, View } from 'react-native';
 
-import { useBreakpoint } from '@/hooks/useBreakpoint';
-import { colors, CONTENT_WIDTH, spacing } from '@/tokens';
+import { colors, spacing } from '@/tokens';
 import { AppText, Badge, Screen, ScreenHeader } from '@/ui';
 
 export interface LegalSection {
@@ -29,10 +28,9 @@ export function LegalDocument({
   draft = true,
   sections,
 }: LegalDocumentProps) {
-  const { isDesktop } = useBreakpoint();
 
   return (
-    <Screen edges={['top', 'bottom']} noPadding maxWidth={isDesktop ? CONTENT_WIDTH.reading : undefined}>
+    <Screen edges={['top', 'bottom']} noPadding>
       <ScreenHeader title={title} />
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.metaRow}>

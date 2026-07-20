@@ -62,7 +62,17 @@ export type AnalyticsEvent =
   | 'map_open'
   | 'post_create'
   | 'comment_create'
-  | 'result_share';
+  | 'result_share'
+  | 'profile_setup_done'
+  | 'pick_like'
+  | 'pick_pass'
+  | 'cart_add'
+  | 'record_create'
+  | 'review_create'
+  | 'search'
+  | 'chat_send'
+  | 'signup'
+  | 'password_reset_request';
 
 async function capture(
   event: string,

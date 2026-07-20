@@ -1,6 +1,6 @@
 /**
- * ProgressBar — 성향테스트 진행 표시 등.
- * value: 0~1. 트랙 + 채움(primary). 둥근 캡슐.
+ * ProgressBar — 성향테스트 진행 표시 (v6 블루 DS).
+ * value: 0~1. 트랙(neutral200) + 채움(primary 파랑). 둥근 캡슐.
  */
 import { StyleSheet, View } from 'react-native';
 
@@ -19,7 +19,7 @@ export interface ProgressBarProps {
 export function ProgressBar({
   value,
   height = 10,
-  trackColor = colors.surfaceInset,
+  trackColor = colors.divider,
   fillColor = colors.primary,
   accessibilityLabel,
 }: ProgressBarProps) {
@@ -29,12 +29,12 @@ export function ProgressBar({
       accessibilityRole="progressbar"
       accessibilityLabel={accessibilityLabel}
       accessibilityValue={{ min: 0, max: 100, now: Math.round(clamped * 100) }}
-      style={[styles.track, { height, borderRadius: height, backgroundColor: trackColor }]}
+      style={[styles.track, { height, borderRadius: radius.pill, backgroundColor: trackColor }]}
     >
       <View
         style={[
           styles.fill,
-          { width: `${clamped * 100}%`, borderRadius: height, backgroundColor: fillColor },
+          { width: `${clamped * 100}%`, borderRadius: radius.pill, backgroundColor: fillColor },
         ]}
       />
     </View>

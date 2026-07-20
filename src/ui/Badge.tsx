@@ -1,7 +1,6 @@
 /**
- * Badge — 작은 라벨 (v5). 매칭 %, 보조성향, 키워드 태그 등.
- * 톤: primary(그린 틴트)·accent(테라코타 틴트)·neutral(중립 면)·onPhoto(사진 위 흰 필).
- * 원색 텍스트가 아닌 딥 잉크 텍스트(전 조합 AA — 컬러 리서치 계산 검증).
+ * Badge — 작은 라벨 (v6 블루 DS). 매칭 %, 보조성향, 키워드 태그 등.
+ * 톤: primary(블루 틴트)·accent(코랄 틴트)·neutral(중립 면)·success(민트 틴트)·onPhoto(사진 위 흰 필).
  */
 import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
@@ -19,11 +18,11 @@ interface ToneStyle {
 
 const TONES: Record<BadgeTone, ToneStyle> = {
   primary: { bg: colors.primaryTint, fg: colors.primary },
-  accent: { bg: colors.accentTint, fg: colors.accent },
+  accent: { bg: palette.coralSubtle, fg: colors.accentCoral },
   neutral: { bg: colors.surfaceInset, fg: colors.textSecondary },
-  success: { bg: colors.primaryTint, fg: colors.primary },
-  /** 사진 위 오버레이 배지(흰 필 + 그린 텍스트) */
-  onPhoto: { bg: 'rgba(255,255,255,0.94)', fg: palette.green600 },
+  success: { bg: palette.mintSubtle, fg: colors.textPrimary },
+  /** 사진 위 오버레이 배지(흰 필 + 파랑 텍스트) */
+  onPhoto: { bg: 'rgba(255,255,255,0.94)', fg: colors.primary },
 };
 
 export interface BadgeProps {
