@@ -406,7 +406,10 @@ export default function SearchResultsScreen() {
 
   return (
     <Screen noPadding>
-      <HomeHeader />
+      {/* noPadding 화면이라 헤더에 좌우 패딩을 직접 부여 — 홈과 동일 위치(로고·카트 20px) */}
+      <View style={styles.headerPad}>
+        <HomeHeader />
+      </View>
       <View style={styles.root}>
         {/* 뒤로 + 검색바 + 필터 */}
         <View style={styles.headerRow}>
@@ -537,6 +540,9 @@ export default function SearchResultsScreen() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
+  },
+  headerPad: {
+    paddingHorizontal: spacing.lg,
   },
   flex: {
     flex: 1,
