@@ -5,7 +5,7 @@
  *  · Primitive 6색: Blue(주 브랜드)·Yellow·Calot(코랄)·Purple·Mint·Brown + 각 Subtle 틴트
  *  · Neutral 8단계 웜그레이(#FEFEFE~#1C1C1A)
  *  · Function: cta=blue, warning=yellow, danger=coral, success=mint
- * 배경은 neutral50(#FAFAF8), 카드 표면은 neutral0(#FEFEFE).
+ * 배경은 neutral50(#F8F8F8 — 26.07 온보딩작업 페이지에서 #FAFAF8→#F8F8F8 변경), 카드 표면은 neutral0(#FEFEFE).
  */
 
 export const palette = {
@@ -22,6 +22,11 @@ export const palette = {
   coralPastel: '#F5AEA2',
   mintPastel: '#B6F0DD',
 
+  // Primitive Deep (WCAG AA 보정용 — 브랜드 색을 대비 기준까지 어둡게. 시니어 접근성 사수)
+  yellowDeep: '#C77F00', // 흰 배경 위 3.22:1 — 대형 텍스트(20/700)·아이콘 전용
+  coralDeep: '#DC6450', // 흰 텍스트 3.51:1 — 컬러 카드/버튼 배경용
+  mintDeep: '#147A58', // 민트(#85E6C7) 위 3.58:1 — 민트 원 안 아이콘용
+
   // Primitive Subtle (연한 배경 틴트)
   blueSubtle: '#DBEAFE',
   yellowSubtle: '#FEF3D7',
@@ -32,7 +37,7 @@ export const palette = {
 
   // Neutral 8단계 (웜그레이)
   neutral0: '#FEFEFE', // 카드/표면
-  neutral50: '#FAFAF8', // 앱 배경
+  neutral50: '#F8F8F8', // 앱 배경
   neutral100: '#F4F3F0', // 비활성 배경/서치바
   neutral200: '#E8E7E3', // 구분선/비활성 도트
   neutral300: '#C8C7C3', // 보더
@@ -66,6 +71,8 @@ export const colors = {
   primary: palette.blue,
   primaryPressed: '#3673D4', // 눌림(구 DS 다크블루 — 인터랙션 전용)
   primaryTint: palette.blueSubtle,
+  /** 밝은 배경 위 블루 "텍스트" 전용 — #F8F8F8 위 5.07:1 AA (브랜드 블루 #5793F4는 2.87:1이라 텍스트 금지) */
+  primaryText: '#2F68C4',
 
   accentYellow: palette.yellow,
   accentCoral: palette.coral,
@@ -84,6 +91,10 @@ export const colors = {
   onPrimary: palette.neutral0,
 
   danger: palette.coral,
+  /** 위험 액션 "배경"(흰 라벨) — 흰 텍스트 3.51:1 (coral 원색은 2.80:1) */
+  dangerStrong: palette.coralDeep,
+  /** 밝은 배경 위 위험 "텍스트" — 흰 카드 위 5.39:1 AA */
+  dangerText: '#C0392B',
   warning: palette.yellow,
   success: palette.mint,
 

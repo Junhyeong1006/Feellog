@@ -1,7 +1,8 @@
 /**
- * 탭 내비게이션 (v6) — 메인 · 기록 · 소통 · 마이.
+ * 탭 내비게이션 (v6, 26.07 온보딩작업 시안 반영) — 메인 · 기록 · 소통 · 마이.
  * 디자인: 플로팅 라운드 탭바(흰 배경, 상단 라운드, 옅은 그림자),
- * 활성 탭 = 연블루 원형 필 + 블루 아이콘/라벨, 비활성 = 뉴트럴.
+ * 활성 탭 = 회색(neutral100) 라운드 사각 필(68×60 r24) + 블루 아이콘, 비활성 = 그레이 아이콘.
+ * 라벨은 항상 진한 텍스트(시안 Nav Item).
  *
  * 게이트: 부팅 디사이더(index)만으로는 딥링크(/home 직접 진입)를 못 막으므로
  * 여기서도 로그인/게스트를 검사한다(정적 export는 모든 라우트가 직접 진입 가능).
@@ -24,11 +25,12 @@ import { useAuth } from '@/providers/AuthProvider';
 import { colors, MAX_CONTENT_WIDTH, radius, shadows, spacing } from '@/tokens';
 import { AppText } from '@/ui';
 
-const TAB_META: Record<string, { label: string; icon: keyof typeof Ionicons.glyphMap; iconActive: keyof typeof Ionicons.glyphMap }> = {
-  home: { label: '메인', icon: 'home-outline', iconActive: 'home' },
-  log: { label: '기록', icon: 'pencil-outline', iconActive: 'pencil' },
-  community: { label: '소통', icon: 'people-outline', iconActive: 'people' },
-  my: { label: '마이', icon: 'person-outline', iconActive: 'person' },
+/** 시안(334:1043 등)은 두 상태 모두 채워진(filled) 36px 글리프 — 활성은 필+블루, 비활성은 그레이 */
+const TAB_META: Record<string, { label: string; icon: keyof typeof Ionicons.glyphMap }> = {
+  home: { label: '메인', icon: 'home' },
+  log: { label: '기록', icon: 'pencil' },
+  community: { label: '소통', icon: 'people' },
+  my: { label: '마이', icon: 'person' },
 };
 
 function FloatingTabBar({ state, navigation }: TabBarProps) {
@@ -52,20 +54,20 @@ function FloatingTabBar({ state, navigation }: TabBarProps) {
               accessibilityLabel={meta.label}
               style={styles.item}
             >
-              <View style={[styles.iconWrap, focused && styles.iconWrapActive]}>
+              <View style={[styles.pill, focused && styles.pillActive]}>
                 <Ionicons
-                  name={focused ? meta.iconActive : meta.icon}
-                  size={24}
+                  name={meta.icon}
+                  size={36}
                   color={focused ? colors.primary : colors.textSecondary}
                 />
+                <AppText
+                  variant="caption"
+                  weight={focused ? 'bold' : 'regular'}
+                  color={colors.textPrimary}
+                >
+                  {meta.label}
+                </AppText>
               </View>
-              <AppText
-                variant="small"
-                weight={focused ? 'bold' : 'regular'}
-                color={focused ? colors.primary : colors.textSecondary}
-              >
-                {meta.label}
-              </AppText>
             </Pressable>
           );
         })}
@@ -129,14 +131,15 @@ const styles = StyleSheet.create({
     minHeight: Platform.OS === 'web' ? 64 : 60,
     paddingVertical: spacing.xs,
   },
-  iconWrap: {
-    width: 44,
-    height: 44,
-    borderRadius: radius.pill,
+  pill: {
+    width: 68,
+    height: 60,
+    borderRadius: radius.xxl,
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 2,
   },
-  iconWrapActive: {
-    backgroundColor: colors.primaryTint,
+  pillActive: {
+    backgroundColor: colors.surfaceInset,
   },
 });

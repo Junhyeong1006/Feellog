@@ -1,15 +1,15 @@
 /**
- * 마이 탭 — Figma v6 블루 (334-1043).
+ * 마이 탭 — Figma v6 블루 (334-1043, 26.07 온보딩작업 수정 반영).
  * [헤더(로고+카트)] [프로필 섹션 카드: 아바타+이름+성별·생일 서브카드 / 소개글 / 성향 유형 카드]
- * [설정 리스트 4행: 알림·공지·로그아웃·회원탈퇴].
+ * [즐겨찾기·찜 보관 카드 2종] [설정 리스트 4행: 알림·공지·로그아웃·회원탈퇴].
  * 프로필 정보는 로컬 초안(profileDraft)이 정본, 이름은 서버 표시 이름 폴백.
- * 로그아웃/탈퇴는 확인 시트를 거친다(탈퇴는 게스트에게 숨김).
+ * 로그아웃/탈퇴는 중앙 확인 다이얼로그(시안 634:637/636:648)를 거친다(탈퇴는 게스트에게 숨김).
  */
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { router, useFocusEffect, type Href } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { Modal, Pressable, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Modal, Pressable, StyleSheet, View } from 'react-native';
 
 import { deleteMyAccount, displayNameOf } from '@/api/profiles';
 // NOTE: '@/assets/*'는 tsconfig에서 루트 assets/로 매핑되어 src/assets는 상대경로로 가져온다
@@ -19,8 +19,8 @@ import { TYPE_PROFILES } from '@/core';
 import { usePrefs } from '@/hooks/usePrefs';
 import { useAuth } from '@/providers/AuthProvider';
 import { getProfileDraft, type ProfileDraft } from '@/state/profileDraft';
-import { colors, MAX_CONTENT_WIDTH, MIN_TOUCH_SIZE, radius, shadows, spacing } from '@/tokens';
-import { AppText, Button, Divider, Screen } from '@/ui';
+import { colors, MIN_TOUCH_SIZE, palette, radius, shadows, spacing } from '@/tokens';
+import { AppText, Divider, Screen } from '@/ui';
 
 /** 타 화면 소유/신규 라우트 — typed routes 생성 전일 수 있어 문자열 캐스트로 이동 */
 const toHref = (path: string) => path as unknown as Href;
@@ -48,11 +48,43 @@ function MenuRow({ label, onPress }: { label: string; onPress: () => void }) {
   );
 }
 
-/** 확인 바텀 시트(로그아웃/회원탈퇴 공용) */
-function ConfirmSheet({
+/** 보관 카드(즐겨찾기 별/찜 하트) — 흰 r32 카드 + 컬러 타이틀 + 카드 폭 비례 큰 아이콘 (시안 334:1043).
+ * 라벨은 AA 보정 딥 컬러(20/700 대형 텍스트 3:1), 아이콘은 라벨이 의미를 대신하므로 브랜드 원색 유지. */
+function SavedCard({
+  label,
+  labelColor,
+  iconColor,
+  icon,
+  onPress,
+}: {
+  label: string;
+  labelColor: string;
+  iconColor: string;
+  icon: 'star' | 'heart';
+  onPress: () => void;
+}) {
+  const [cardWidth, setCardWidth] = useState(0);
+  return (
+    <Pressable
+      onPress={onPress}
+      onLayout={(e) => setCardWidth(e.nativeEvent.layout.width)}
+      accessibilityRole="button"
+      accessibilityLabel={`${label} 목록 보기`}
+      style={({ pressed }) => [styles.savedCard, pressed && styles.pressedDim]}
+    >
+      <AppText variant="title" color={labelColor}>
+        {label}
+      </AppText>
+      {/* 시안 실측: 글리프가 카드 폭의 약 61% (Ionicons 글리프≈size×0.92 → size = 폭×0.66) */}
+      <Ionicons name={icon} size={Math.round(cardWidth * 0.66) || 96} color={iconColor} />
+    </Pressable>
+  );
+}
+
+/** 중앙 확인 다이얼로그(로그아웃/회원탈퇴 공용) — 시안 634:637/636:648: 흰 r32 카드 + X + 아니오/예 */
+function ConfirmDialog({
   title,
   body,
-  confirmLabel,
   danger,
   busy,
   error,
@@ -60,8 +92,7 @@ function ConfirmSheet({
   onClose,
 }: {
   title: string;
-  body: string;
-  confirmLabel: string;
+  body?: string;
   danger?: boolean;
   busy: boolean;
   error: string | null;
@@ -70,27 +101,69 @@ function ConfirmSheet({
 }) {
   return (
     <Modal transparent animationType="fade" visible onRequestClose={onClose}>
-      <Pressable style={styles.scrim} onPress={busy ? undefined : onClose} accessibilityLabel="닫기" />
-      <View style={styles.sheetWrap} pointerEvents="box-none">
-        <View style={styles.sheet}>
-          <AppText variant="h3" center>
+      <View style={styles.dialogRoot}>
+        {/* 스크림: 닫기는 X·아니오가 담당 — 보조기술 트리에서 숨김 */}
+        <Pressable
+          style={styles.scrim}
+          onPress={busy ? undefined : onClose}
+          aria-hidden
+          focusable={false}
+        />
+        <View style={styles.dialog}>
+          <Pressable
+            onPress={busy ? undefined : onClose}
+            accessibilityRole="button"
+            accessibilityLabel="닫기"
+            hitSlop={spacing.md}
+            style={({ pressed }) => [styles.dialogClose, pressed && styles.pressedDim]}
+          >
+            <Ionicons name="close" size={18} color={colors.textSecondary} />
+          </Pressable>
+
+          <AppText variant="bodyLg" center style={styles.dialogTitle}>
             {title}
           </AppText>
-          <AppText variant="body" muted center style={styles.sheetBody}>
-            {body}
-          </AppText>
+          {body != null && (
+            <AppText variant="body" muted center>
+              {body}
+            </AppText>
+          )}
           {error != null && (
-            <AppText variant="caption" color={colors.danger} center>
+            <AppText variant="body2" color={colors.dangerText} center>
               {error}
             </AppText>
           )}
-          <Button
-            label={confirmLabel}
-            onPress={onConfirm}
-            loading={busy}
-            style={danger ? styles.dangerBtn : undefined}
-          />
-          <Button label="취소" variant="secondary" onPress={onClose} disabled={busy} />
+
+          <View style={styles.dialogBtnRow}>
+            <Pressable
+              onPress={busy ? undefined : onClose}
+              accessibilityRole="button"
+              accessibilityLabel="아니오"
+              style={({ pressed }) => [styles.dialogBtn, styles.dialogNo, pressed && styles.pressedDim]}
+            >
+              <AppText variant="title" weight="medium">
+                아니오
+              </AppText>
+            </Pressable>
+            <Pressable
+              onPress={busy ? undefined : onConfirm}
+              accessibilityRole="button"
+              accessibilityLabel="예"
+              style={({ pressed }) => [
+                styles.dialogBtn,
+                danger ? styles.dialogYesDanger : styles.dialogYes,
+                pressed && styles.pressedDim,
+              ]}
+            >
+              {busy ? (
+                <ActivityIndicator color={colors.onPrimary} />
+              ) : (
+                <AppText variant="titleW" color={colors.onPrimary}>
+                  예
+                </AppText>
+              )}
+            </Pressable>
+          </View>
         </View>
       </View>
     </Modal>
@@ -138,6 +211,7 @@ export default function MyScreen() {
   const typeLabel = prefs?.mainType ? TYPE_PROFILES[prefs.mainType].label : null;
 
   const closeConfirm = () => {
+    if (busy) return; // 진행 중 닫힘 방지(onRequestClose 포함 전 경로)
     setConfirm(null);
     setError(null);
   };
@@ -181,7 +255,7 @@ export default function MyScreen() {
               {avatarSource ? (
                 <Image source={avatarSource} style={styles.avatarImg} contentFit="cover" />
               ) : (
-                <AppText variant="h1" color={colors.primary}>
+                <AppText variant="h1" color={colors.primaryText}>
                   {initial || '?'}
                 </AppText>
               )}
@@ -194,7 +268,7 @@ export default function MyScreen() {
           <View style={styles.identity}>
             {hasProfile ? (
               <>
-                <AppText variant="title" color={colors.primary} numberOfLines={1}>
+                <AppText variant="title" color={colors.primaryText} numberOfLines={1}>
                   {nickname}
                 </AppText>
                 {(genderLabel != null || birthLabel != null) && (
@@ -272,7 +346,23 @@ export default function MyScreen() {
         </Pressable>
       </View>
 
-      <View style={styles.grow} />
+      {/* 보관 카드 2종 — 즐겨찾기(별)·찜(하트) */}
+      <View style={styles.savedRow}>
+        <SavedCard
+          label="즐겨찾기"
+          labelColor={palette.yellowDeep}
+          iconColor={colors.accentYellow}
+          icon="star"
+          onPress={() => router.push(toHref('/my/saved?tab=favorites'))}
+        />
+        <SavedCard
+          label="찜"
+          labelColor={palette.coralDeep}
+          iconColor={colors.accentCoral}
+          icon="heart"
+          onPress={() => router.push(toHref('/my/saved?tab=wishlist'))}
+        />
+      </View>
 
       {/* 설정 리스트 (스펙 3: neutral100 컨테이너 r20) */}
       <View style={styles.menu}>
@@ -290,10 +380,8 @@ export default function MyScreen() {
       </View>
 
       {confirm === 'logout' && (
-        <ConfirmSheet
-          title="로그아웃 할까요?"
-          body="다시 로그인하면 이어서 이용하실 수 있어요."
-          confirmLabel="로그아웃 하기"
+        <ConfirmDialog
+          title={'"로그아웃 하시겠습니까?"'}
           busy={busy}
           error={error}
           onConfirm={() => void onLogout()}
@@ -301,10 +389,9 @@ export default function MyScreen() {
         />
       )}
       {confirm === 'delete' && (
-        <ConfirmSheet
-          title="정말 탈퇴할까요?"
-          body="프로필, 성향 결과, 기록이 모두 삭제되며 되돌릴 수 없어요."
-          confirmLabel="회원 탈퇴하기"
+        <ConfirmDialog
+          title={'"탈퇴 하시겠습니까?"'}
+          body="예약 내역, 후기, 쿠폰 등 모든 정보가 삭제되며 복구할 수 없어요"
           danger
           busy={busy}
           error={error}
@@ -317,19 +404,16 @@ export default function MyScreen() {
 }
 
 const styles = StyleSheet.create({
-  grow: {
-    flex: 1,
-  },
   content: {
-    flexGrow: 1,
     paddingBottom: spacing.xxl,
     gap: spacing.xl,
   },
   pressedDim: {
     opacity: 0.85,
   },
-  // ── 프로필 섹션 카드 ──
+  // ── 프로필 섹션 카드 (시안 334:1043: 컬럼 풀블리드 흰 카드 r20) ──
   profileCard: {
+    marginHorizontal: -spacing.lg, // Screen 좌우 패딩 상쇄 → 풀블리드
     backgroundColor: colors.surface,
     borderRadius: radius.xl,
     padding: spacing.lg,
@@ -345,12 +429,12 @@ const styles = StyleSheet.create({
     gap: spacing.base,
   },
   avatarWrap: {
-    width: 116,
-    height: 116,
+    width: 134,
+    height: 134,
   },
   avatarCircle: {
-    width: 116,
-    height: 116,
+    width: 134,
+    height: 134,
     borderRadius: radius.pill,
     borderWidth: 4,
     borderColor: colors.surfaceInset,
@@ -393,7 +477,7 @@ const styles = StyleSheet.create({
   },
   editBtn: {
     alignSelf: 'flex-start',
-    minHeight: 40,
+    minHeight: MIN_TOUCH_SIZE,
     justifyContent: 'center',
     paddingHorizontal: spacing.md,
     borderRadius: radius.sm,
@@ -441,7 +525,22 @@ const styles = StyleSheet.create({
   menuRowPressed: {
     opacity: 0.6,
   },
-  // ── 확인 시트 ──
+  // ── 보관 카드(즐겨찾기·찜) ──
+  savedRow: {
+    flexDirection: 'row',
+    gap: spacing.base,
+  },
+  savedCard: {
+    flex: 1,
+    aspectRatio: 152 / 167,
+    backgroundColor: colors.surface,
+    borderRadius: radius.xxxl,
+    alignItems: 'center',
+    justifyContent: 'space-evenly',
+    paddingVertical: spacing.base,
+    ...shadows.card,
+  },
+  // ── 중앙 확인 다이얼로그 ──
   scrim: {
     position: 'absolute',
     top: 0,
@@ -450,27 +549,55 @@ const styles = StyleSheet.create({
     bottom: 0,
     backgroundColor: colors.scrim,
   },
-  sheetWrap: {
+  dialogRoot: {
     flex: 1,
-    justifyContent: 'flex-end',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  sheet: {
-    width: '100%',
-    maxWidth: MAX_CONTENT_WIDTH,
-    alignSelf: 'center',
+  dialog: {
+    width: 300, // 시안 260 — 본문 16px 시니어 가독을 위해 소폭 확대
+    minHeight: 220,
     backgroundColor: colors.surface,
-    borderTopLeftRadius: radius.xxl,
-    borderTopRightRadius: radius.xxl,
+    borderRadius: radius.xxxl,
     padding: spacing.xl,
-    paddingBottom: spacing.xxl,
-    gap: spacing.md,
+    paddingTop: spacing.xxl,
+    gap: spacing.sm,
     ...shadows.floating,
   },
-  sheetBody: {
-    marginBottom: spacing.xs,
+  dialogClose: {
+    position: 'absolute',
+    top: spacing.xs,
+    right: spacing.xs,
+    width: MIN_TOUCH_SIZE,
+    height: MIN_TOUCH_SIZE,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1,
   },
-  dangerBtn: {
-    backgroundColor: colors.danger,
-    borderColor: colors.danger,
+  dialogTitle: {
+    marginTop: spacing.xs,
+  },
+  dialogBtnRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: spacing.md,
+    marginTop: 'auto',
+    paddingTop: spacing.base,
+  },
+  dialogBtn: {
+    width: 100,
+    height: 56,
+    borderRadius: radius.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dialogNo: {
+    backgroundColor: colors.surfaceInset,
+  },
+  dialogYes: {
+    backgroundColor: colors.primary,
+  },
+  dialogYesDanger: {
+    backgroundColor: colors.dangerStrong,
   },
 });

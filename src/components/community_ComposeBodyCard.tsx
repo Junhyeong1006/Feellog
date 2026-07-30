@@ -46,7 +46,7 @@ export function CommunityComposeBodyCard({
   onChangeBgTone,
   imageUri,
   onChangeImageUri,
-  placeholder = 'ㅣ여기를 눌러 새로운 소식을 작성해주세요',
+  placeholder = '여기를 눌러 새로운 소식을 작성해주세요',
   onPickError,
 }: ComposeBodyCardProps) {
   const { scale } = useFontScale();

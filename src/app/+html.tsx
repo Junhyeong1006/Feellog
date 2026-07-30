@@ -21,7 +21,7 @@ const BASE_CSS = `
 ${FONT_FACES}
 @font-face{font-family:'Ownglyph brilliant';font-style:normal;font-weight:400;font-display:swap;src:url(/fonts/ownglyph/Ownglyph_brilliant-Rg.woff2) format('woff2');}
 html, body {
-  background-color: #FAFAF8;
+  background-color: #F8F8F8;
   font-family: SUIT, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;

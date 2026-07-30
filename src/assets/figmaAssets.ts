@@ -70,30 +70,7 @@ export const figmaAssets = {
   },
 
   photos: {
-    /** 테스트 시작 화면 히어로("취미를 기록") — 50:6699 */
-    testStartHero: require('../../assets/figma/photos/test-start-hero.png'),
-    /** Q1/Q7 선택지 A — 고요한 공간 */
-    testCalm: require('../../assets/figma/photos/test-calm.jpg'),
-    /** Q1/Q7 선택지 B — 활동적 공간 */
-    testActive: require('../../assets/figma/photos/test-active.jpg'),
-    /** Q2 선택지 A — 정원 */
-    testGarden: require('../../assets/figma/photos/test-garden.jpg'),
-    /** Q2 선택지 B — 공예실 */
-    testCraft: require('../../assets/figma/photos/test-craft.jpg'),
-    /** Q3 선택지 A/B(디자인상 동일 이미지) — 힐링 */
-    testHealing: require('../../assets/figma/photos/test-healing.jpg'),
-    /** Q4 선택지 A — 혼자 */
-    testAlone: require('../../assets/figma/photos/test-alone.jpg'),
-    /** Q4 선택지 B — 함께 */
-    testTogether: require('../../assets/figma/photos/test-together.jpg'),
-    /** Q5 선택지 A — 50:6826 */
-    testQ5A: require('../../assets/figma/photos/test-q5-a.jpg'),
-    /** Q5 선택지 B — 50:6826 */
-    testQ5B: require('../../assets/figma/photos/test-q5-b.jpg'),
-    /** Q10 선택지 A — 65:9462 */
-    testQ10A: require('../../assets/figma/photos/test-q10-a.jpg'),
-    /** Q10 선택지 B — 65:9462 */
-    testQ10B: require('../../assets/figma/photos/test-q10-b.jpg'),
+    // (26.07 온보딩작업) 성향테스트가 텍스트 카드 2택으로 개편되어 문항 사진 12장은 제거됨
     /** 결과 화면 캘리그래피 카드 — 334:1260 (ref 19e9a145ca53) */
     resultCalligraphy: require('../../assets/figma/photos/result-calligraphy.jpg'),
     /** 홈 오늘의 하루 픽 카드 썸네일 / 클래스 상세 하단 IMG — ref 3b77284547a9 */

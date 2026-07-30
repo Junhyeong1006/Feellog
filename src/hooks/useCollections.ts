@@ -8,10 +8,12 @@ import {
   addLocalRecord,
   addToLocalCart,
   getLocalCart,
+  getLocalFavorites,
   getLocalRecords,
   getLocalWishlist,
   removeFromLocalCart,
   removeLocalRecord,
+  toggleLocalFavorites,
   toggleLocalWishlist,
   type CartItem,
   type LocalRecord,
@@ -24,6 +26,7 @@ function makeStore<T>(): Store<T> {
 }
 
 const wishlistStore = makeStore<string[]>();
+const favoritesStore = makeStore<string[]>();
 const cartStore = makeStore<CartItem[]>();
 const recordsStore = makeStore<LocalRecord[]>();
 
@@ -69,6 +72,22 @@ export function useWishlist() {
     [set],
   );
   return { ids: ids ?? [], loading: ids === undefined, isWished: (id: string) => (ids ?? []).includes(id), toggle };
+}
+
+export function useFavorites() {
+  const [ids, set] = useStore(favoritesStore, getLocalFavorites);
+  const toggle = useCallback(
+    async (activityId: string) => {
+      set(await toggleLocalFavorites(activityId));
+    },
+    [set],
+  );
+  return {
+    ids: ids ?? [],
+    loading: ids === undefined,
+    isFavorite: (id: string) => (ids ?? []).includes(id),
+    toggle,
+  };
 }
 
 export function useCart() {

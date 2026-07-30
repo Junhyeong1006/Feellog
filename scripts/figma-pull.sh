@@ -18,7 +18,7 @@
 set -e
 cd "$(dirname "$0")/.."
 
-FILE_KEY="${2:-ernIVx8Gx05noC684mUuy9}"   # 기본: 필로그 파일
+FILE_KEY="${2:-H5lxkuhOlEXKflXEJkMImC}"   # 기본: 필로그 (Copy) 26.07 — 파일 키가 바뀌면 월 6회 예산도 새로 시작
 NODE_ARG="${1:-210-4516}"                  # URL 표기(하이픈)
 SCALE="${3:-2}"                            # PNG 배율(2x 권장)
 OUT="figma-export"

@@ -27,7 +27,7 @@ import {
   formatDuration,
   formatPrice,
 } from '@/data/activityDisplay';
-import { useCart, useWishlist } from '@/hooks/useCollections';
+import { useCart, useFavorites, useWishlist } from '@/hooks/useCollections';
 import { track } from '@/lib/analytics';
 import { colors, radius, shadows, spacing } from '@/tokens';
 import { AppText, Button, Card, Chip, Screen, Stars } from '@/ui';
@@ -95,6 +95,7 @@ export default function ActivityDetailScreen() {
   const activity = useMemo(() => ACTIVITY_SEED.find((a) => a.id === id) ?? null, [id]);
 
   const { isWished, toggle } = useWishlist();
+  const { isFavorite, toggle: toggleFavorite } = useFavorites();
   const { count: cartCount, add: addToCart } = useCart();
 
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -142,6 +143,7 @@ export default function ActivityDetailScreen() {
   const reviews = demoReviews(activity);
   const visibleReviews = showAllReviews ? reviews : reviews.slice(0, 2);
   const wished = isWished(activity.id);
+  const favored = isFavorite(activity.id);
   // 시드 활동은 카테고리 대표 실사진, 그 외(미래 실데이터)는 상세 히어로 기본 사진
   const heroSource = ACTIVITY_SEED.includes(activity)
     ? demoPhoto(activity)
@@ -194,6 +196,16 @@ export default function ActivityDetailScreen() {
           style={({ pressed }) => [styles.circleBtn, styles.wishBtn, pressed && styles.pressed]}
         >
           <Ionicons name={wished ? 'heart' : 'heart-outline'} size={26} color={colors.accentCoral} />
+        </Pressable>
+
+        <Pressable
+          onPress={() => void toggleFavorite(activity.id)}
+          accessibilityRole="button"
+          accessibilityLabel={favored ? '즐겨찾기 해제하기' : '즐겨찾기 추가하기'}
+          accessibilityState={{ selected: favored }}
+          style={({ pressed }) => [styles.circleBtn, styles.favBtn, pressed && styles.pressed]}
+        >
+          <Ionicons name={favored ? 'star' : 'star-outline'} size={26} color={colors.accentYellow} />
         </Pressable>
 
         <Pressable
@@ -491,6 +503,10 @@ const styles = StyleSheet.create({
   wishBtn: {
     backgroundColor: colors.background,
     borderColor: colors.accentCoral,
+  },
+  favBtn: {
+    backgroundColor: colors.background,
+    borderColor: colors.accentYellow,
   },
   cartBtn: {
     backgroundColor: colors.surfaceInset,

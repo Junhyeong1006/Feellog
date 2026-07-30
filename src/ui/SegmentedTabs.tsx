@@ -32,7 +32,7 @@ export function SegmentedTabs({ tabs, activeIndex, onChange, style }: SegmentedT
           >
             <AppText
               variant="title"
-              color={active ? colors.primary : colors.textSecondary}
+              color={active ? colors.primaryText : colors.textSecondary}
               center
             >
               {tab}

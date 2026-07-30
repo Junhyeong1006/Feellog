@@ -6,6 +6,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const WISHLIST_KEY = 'feellog.wishlist';
+const FAVORITES_KEY = 'feellog.favorites';
 const CART_KEY = 'feellog.cart';
 const RECORDS_KEY = 'feellog.records';
 
@@ -32,6 +33,15 @@ export async function toggleLocalWishlist(activityId: string): Promise<string[]>
   const cur = await getLocalWishlist();
   const next = cur.includes(activityId) ? cur.filter((id) => id !== activityId) : [...cur, activityId];
   await setJson(WISHLIST_KEY, next);
+  return next;
+}
+
+// ── 즐겨찾기(별) — 찜(하트)과 별개 컬렉션, 마이 탭 보관 카드에서 사용 ──
+export const getLocalFavorites = () => getJson<string[]>(FAVORITES_KEY, []);
+export async function toggleLocalFavorites(activityId: string): Promise<string[]> {
+  const cur = await getLocalFavorites();
+  const next = cur.includes(activityId) ? cur.filter((id) => id !== activityId) : [...cur, activityId];
+  await setJson(FAVORITES_KEY, next);
   return next;
 }
 
@@ -92,6 +102,7 @@ export async function removeLocalRecord(id: string): Promise<LocalRecord[]> {
 export async function clearLocalCollections(): Promise<void> {
   await Promise.all([
     AsyncStorage.removeItem(WISHLIST_KEY).catch(() => {}),
+    AsyncStorage.removeItem(FAVORITES_KEY).catch(() => {}),
     AsyncStorage.removeItem(CART_KEY).catch(() => {}),
     AsyncStorage.removeItem(RECORDS_KEY).catch(() => {}),
   ]);

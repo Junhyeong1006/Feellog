@@ -1,8 +1,8 @@
 /**
- * 후기쓰기 2단계 플로우 (Figma 604-1086 → 593-4367).
- * 1단계: '완료한 클래스' 선택 — 기록(useRecords, activityId 있는 것) + 데모 1건.
- * 2단계: 클래스명 표시 + 본문 카드(사진·배경색) + 난이도(하/중/상) + 만족도(별점)
- *        → 완료하기 → 로컬 저장(localPosts, rating 포함) 후 소통 피드로 복귀.
+ * 후기쓰기 2단계 플로우 (26.07 온보딩작업 시안 604:1086 → 631:506).
+ * 1단계 '후기쓰기': '완료한 클래스' 선택 — 컬러 카드(코랄/블루/브라운 순환) + 흰 원형 화살표.
+ * 2단계 '글쓰기': 본문 카드(사진·배경색) + 난이도(5단계 슬라이더) + 만족도(별점)
+ *        → 완료하기(콘텐츠 흐름 내) → 로컬 저장(localPosts, rating 포함) 후 소통 피드로 복귀.
  */
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -15,15 +15,17 @@ import {
   CommunityComposeBodyCard,
   type PostBgTone,
 } from '@/components/community_ComposeBodyCard';
+import { DIFFICULTY_LEVELS, DifficultySlider } from '@/components/DifficultySlider';
 import { ACTIVITY_SEED } from '@/data/activitySeed';
 import { useRecords } from '@/hooks/useCollections';
 import { track } from '@/lib/analytics';
 import { useAuth } from '@/providers/AuthProvider';
 import { useLocalPosts } from '@/state/localPosts';
-import { colors, MIN_TOUCH_SIZE, radius, spacing } from '@/tokens';
-import { AppText, Button, Chip, Screen, ScreenHeader, Stars } from '@/ui';
+import { colors, MIN_TOUCH_SIZE, palette, radius, spacing } from '@/tokens';
+import { AppText, Button, Screen, ScreenHeader, Stars } from '@/ui';
 
-const DIFFICULTY_OPTIONS = ['하', '중', '상'] as const;
+/** 완료 클래스 카드 색 순환(시안: 코랄 → 블루 → 브라운. 코랄은 흰 타이틀 3:1 미달이라 AA 딥코랄로 보정) */
+const CLASS_CARD_TONES = [palette.coralDeep, colors.primary, palette.brown] as const;
 const MAX_BODY = 2000;
 
 /** 후기 대상 클래스(데모 1건 + 기록에서 온 것) */
@@ -77,22 +79,29 @@ function SelectStep({
 
       <AppText variant="title">완료한 클래스</AppText>
 
-      {classes.map((c) => (
-        <Pressable
-          key={c.key}
-          onPress={() => onSelect(c)}
-          accessibilityRole="button"
-          accessibilityLabel={`${c.title} 후기 쓰기`}
-          style={({ pressed }) => [styles.classCard, pressed && styles.pressedCard]}
-        >
-          <AppText variant="title" numberOfLines={2} style={styles.classTitle}>
-            {c.title}
-          </AppText>
-          <View style={styles.arrowCircle}>
-            <Ionicons name="arrow-forward" size={26} color={colors.primary} />
-          </View>
-        </Pressable>
-      ))}
+      {classes.map((c, i) => {
+        const tone = CLASS_CARD_TONES[i % CLASS_CARD_TONES.length];
+        return (
+          <Pressable
+            key={c.key}
+            onPress={() => onSelect(c)}
+            accessibilityRole="button"
+            accessibilityLabel={`${c.title} 후기 쓰기`}
+            style={({ pressed }) => [
+              styles.classCard,
+              { backgroundColor: tone },
+              pressed && styles.pressedCard,
+            ]}
+          >
+            <AppText variant="title" color={palette.white} numberOfLines={2} style={styles.classTitle}>
+              {c.title}
+            </AppText>
+            <View style={styles.arrowCircle}>
+              <Ionicons name="arrow-forward" size={32} color={tone} />
+            </View>
+          </Pressable>
+        );
+      })}
 
       <AppText variant="caption" muted style={styles.hint}>
         기록 탭에서 완료한 클래스를 기록하면 이 목록에 추가돼요.
@@ -116,7 +125,7 @@ function WriteStep({
   const [body, setBody] = useState('');
   const [bgTone, setBgTone] = useState<PostBgTone>(null);
   const [imageUri, setImageUri] = useState<string | null>(null);
-  const [difficulty, setDifficulty] = useState<(typeof DIFFICULTY_OPTIONS)[number] | null>(null);
+  const [difficulty, setDifficulty] = useState<number | null>(null);
   const [rating, setRating] = useState(0);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -135,7 +144,7 @@ function WriteStep({
         categoryLabel: target.title,
         body: trimmed,
         bgTone,
-        tags: difficulty != null ? ['후기', `난이도 ${difficulty}`] : ['후기'],
+        tags: difficulty != null ? ['후기', `난이도 ${DIFFICULTY_LEVELS[difficulty]}`] : ['후기'],
         rating,
         imageUri,
       });
@@ -148,16 +157,9 @@ function WriteStep({
   };
 
   return (
-    <Screen
-      edges={['top', 'bottom']}
-      scroll
-      contentStyle={styles.content}
-      footer={
-        <Button label="완료하기" onPress={submit} loading={saving} disabled={!canSubmit} />
-      }
-    >
+    <Screen edges={['top', 'bottom']} scroll contentStyle={styles.content}>
       <View style={styles.headerBleed}>
-        <ScreenHeader title="후기쓰기" onBack={onBackToSelect} right={<CloseButton />} />
+        <ScreenHeader title="글쓰기" onBack={onBackToSelect} right={<CloseButton />} />
       </View>
 
       <View style={styles.targetRow}>
@@ -176,23 +178,13 @@ function WriteStep({
         onChangeBgTone={setBgTone}
         imageUri={imageUri}
         onChangeImageUri={setImageUri}
-        placeholder="ㅣ클래스는 어떠셨나요? 경험을 들려주세요"
+        placeholder="클래스는 어떠셨나요? 경험을 들려주세요"
         onPickError={() => setError('사진을 불러오지 못했어요. 다시 시도해주세요.')}
       />
 
       <View style={styles.sectionCard}>
         <AppText variant="bodyLg">난이도</AppText>
-        <View style={styles.chipRow}>
-          {DIFFICULTY_OPTIONS.map((d) => (
-            <Chip
-              key={d}
-              label={d}
-              size="md"
-              selected={difficulty === d}
-              onPress={() => setDifficulty((cur) => (cur === d ? null : d))}
-            />
-          ))}
-        </View>
+        <DifficultySlider value={difficulty} onChange={setDifficulty} />
       </View>
 
       <View style={styles.sectionCard}>
@@ -210,6 +202,9 @@ function WriteStep({
           {error}
         </AppText>
       )}
+
+      {/* 완료하기 — 시안 631:506: 고정 푸터가 아니라 콘텐츠 흐름 내 */}
+      <Button label="완료하기" onPress={submit} loading={saving} disabled={!canSubmit} />
     </Screen>
   );
 }
@@ -240,13 +235,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.divider,
     borderRadius: radius.xl,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.lg,
-    minHeight: 96,
+    // 시안 604:1086: 타이틀 좌측 여백 48
+    paddingLeft: spacing.xxl + spacing.base,
+    paddingRight: spacing.lg,
+    paddingVertical: spacing.base,
+    minHeight: 97,
   },
   pressedCard: {
     opacity: 0.9,
@@ -259,8 +253,6 @@ const styles = StyleSheet.create({
     height: 52,
     borderRadius: radius.pill,
     backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -277,12 +269,6 @@ const styles = StyleSheet.create({
     borderRadius: radius.xl,
     padding: spacing.base,
     gap: spacing.md,
-  },
-  chipRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    alignItems: 'center',
-    gap: spacing.sm,
   },
   closeBtn: {
     width: MIN_TOUCH_SIZE,
