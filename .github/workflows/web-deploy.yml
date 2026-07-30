@@ -12,9 +12,9 @@
 #   그리고 Cloudflare에 'feellog' Pages 프로젝트를 미리 생성.
 name: web-deploy
 
+# 시크릿(CLOUDFLARE_API_TOKEN 등) 미등록 상태에서 push마다 실패 메일이 오므로
+# Cloudflare Pages 연결 전까지는 수동 실행(workflow_dispatch)만 허용한다.
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 jobs:
