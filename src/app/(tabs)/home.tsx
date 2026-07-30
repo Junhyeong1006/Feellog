@@ -66,10 +66,10 @@ function FilterChip({ label, onPress }: { label: string; onPress: () => void }) 
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={`${label} 필터 선택`}
-      hitSlop={8}
+      hitSlop={spacing.sm}
       style={({ pressed }) => [styles.filterChip, pressed && styles.pressedDim]}
     >
-      <AppText variant="small" color={palette.black}>
+      <AppText variant="caption" color={palette.black}>
         {label}
       </AppText>
       <Ionicons name="chevron-down" size={14} color={colors.primary} />
@@ -210,7 +210,8 @@ function CategoryGrid() {
           style={({ pressed }) => [styles.gridItem, pressed && styles.pressedDim]}
         >
           <Image source={item.icon} style={styles.gridIcon} contentFit="contain" />
-          <AppText variant="small" color={palette.black}>
+          {/* 메인 핵심 동선 — 시니어 가독을 위해 16px 볼드(감사 확정 건) */}
+          <AppText variant="body2" color={palette.black}>
             {item.label}
           </AppText>
         </Pressable>
@@ -346,7 +347,7 @@ export default function HomeScreen() {
             style={({ pressed }) => [styles.searchBar, pressed && styles.pressedDim]}
           >
             <Ionicons name="search" size={20} color={colors.primary} />
-            <AppText variant="caption" color={colors.textSecondary} style={styles.searchPlaceholder}>
+            <AppText variant="body" color={colors.textSecondary} style={styles.searchPlaceholder}>
               어떤 활동을 찾고 계신가요?
             </AppText>
             <Ionicons name="menu" size={22} color={colors.primary} />

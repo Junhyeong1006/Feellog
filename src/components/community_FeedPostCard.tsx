@@ -134,7 +134,7 @@ export function CommunityFeedPostCard({
             </View>
           )}
           {post.rating != null && (
-            <Stars value={post.rating} size={16} style={styles.stars} />
+            <Stars value={post.rating} size={20} style={styles.stars} />
           )}
         </View>
       </View>

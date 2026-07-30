@@ -296,7 +296,7 @@ export default function MyScreen() {
               hitSlop={spacing.xs}
               style={({ pressed }) => [styles.editBtn, pressed && styles.pressedDim]}
             >
-              <AppText variant="body" muted>
+              <AppText variant="body" weight="medium">
                 프로필 수정하기
               </AppText>
             </Pressable>

@@ -11,7 +11,7 @@ import { useMemo, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import Svg, { Circle, Line, Polyline } from 'react-native-svg';
 
-import { FeellogLogo } from '@/components/FeellogLogo';
+import { HomeHeader } from '@/components/HomeHeader';
 import { RecordCalendar, dateKeyOf } from '@/components/RecordCalendar';
 import { rankActivities, type Activity } from '@/core';
 import { demoPhoto } from '@/data/activityDisplay';
@@ -64,11 +64,7 @@ function MonthTrendChart({ labels, counts }: { labels: string[]; counts: number[
       accessible
       accessibilityLabel={`최근 4개월 기록 수 — ${a11y}`}
     >
-      <View style={styles.legendRow}>
-        {TREND_DOT_COLORS.map((c) => (
-          <View key={c} style={[styles.legendDot, { backgroundColor: c }]} />
-        ))}
-      </View>
+      {/* 라벨 없는 점 4개 범례는 얼룩처럼 보여 제거 — 월 라벨 달린 점이 아래에 이미 있음(감사 확정 건) */}
       {width > 0 && (
         <Svg width={width} height={H}>
           {[0.25, 0.5, 0.75].map((t) => (
@@ -228,25 +224,9 @@ export default function LogScreen() {
 
   return (
     <Screen scroll noPadding edges={['top']}>
-      {/* 헤더: 로고 + 장바구니 */}
+      {/* 헤더: 로고 + 장바구니(공용 HomeHeader — 탭 간 배치 통일, 동작은 담기 시트) */}
       <View style={styles.header}>
-        <FeellogLogo width={108} />
-        <Pressable
-          onPress={() => setCartOpen(true)}
-          accessibilityRole="button"
-          accessibilityLabel={`장바구니, ${cartCount}개 담김`}
-          hitSlop={spacing.xs}
-          style={({ pressed }) => [styles.cartBtn, pressed && styles.pressed]}
-        >
-          <Ionicons name="cart-outline" size={20} color={colors.primary} />
-          {cartCount > 0 && (
-            <View style={styles.cartBadge}>
-              <AppText variant="small" weight="bold" color={colors.onPrimary} tabular>
-                {cartCount}
-              </AppText>
-            </View>
-          )}
-        </Pressable>
+        <HomeHeader onCartPress={() => setCartOpen(true)} />
       </View>
 
       {/* 캘린더 */}
@@ -450,34 +430,8 @@ const styles = StyleSheet.create({
     flexGrow: 0,
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
     paddingBottom: spacing.sm,
-  },
-  cartBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: radius.pill,
-    backgroundColor: colors.surfaceInset,
-    borderWidth: 1,
-    borderColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cartBadge: {
-    position: 'absolute',
-    top: -4,
-    right: -4,
-    minWidth: 18,
-    height: 18,
-    borderRadius: radius.pill,
-    backgroundColor: colors.accentCoral,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 3,
   },
   section: {
     paddingHorizontal: spacing.lg,
@@ -497,16 +451,6 @@ const styles = StyleSheet.create({
   },
   trendChart: {
     flex: 1,
-  },
-  legendRow: {
-    flexDirection: 'row',
-    gap: spacing.xs,
-    marginBottom: spacing.xs,
-  },
-  legendDot: {
-    width: 5,
-    height: 5,
-    borderRadius: radius.pill,
   },
   trendLabels: {
     flexDirection: 'row',

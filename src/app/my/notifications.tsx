@@ -48,8 +48,8 @@ export default function NotificationsScreen() {
     });
   };
 
-  // 스펙: OFF 카드 #A8A7A3(neutral400) / ON 카드 #5793F4(primary)
-  const cardColor = enabled ? colors.primary : palette.neutral400;
+  // 스펙 OFF는 #A8A7A3(neutral400)이나 흰 라벨 대비 2.4:1 미달 → 진회색으로 보정(흰 라벨 5.5:1)
+  const cardColor = enabled ? colors.primary : palette.neutral600;
 
   return (
     <Screen scroll edges={['top', 'bottom']} contentStyle={styles.content}>
@@ -83,8 +83,8 @@ export default function NotificationsScreen() {
 
       {/* 용도 설명 */}
       <View style={styles.explain}>
-        <AppText variant="bodyLg" color={colors.primary}>
-          알람 용도는 무엇일까요?
+        <AppText variant="bodyLg" color={colors.primaryText}>
+          알림 용도는 무엇일까요?
         </AppText>
         <AppText variant="body" muted>
           허용을 하시면 예약 추천, 이벤트 등 다양한 소식을 앱 상단에서 받아 보실 수 있어요!
@@ -97,10 +97,10 @@ export default function NotificationsScreen() {
           <FeellogLogo width={40} />
         </View>
         <View style={styles.previewTexts}>
-          <AppText variant="body" weight="regular" color={colors.primary}>
+          <AppText variant="body" weight="regular" color={colors.primaryText}>
             Feellog
           </AppText>
-          <AppText variant="small" color={colors.primary}>
+          <AppText variant="caption" color={colors.textPrimary}>
             최근 가까운 곳에 새로 오픈한 곳이 있어요!
           </AppText>
         </View>

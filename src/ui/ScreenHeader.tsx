@@ -61,8 +61,9 @@ const styles = StyleSheet.create({
     minHeight: MIN_TOUCH_SIZE + spacing.sm,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
+    // 좌우 패딩 없음 — 뒤로가기 원이 화면 콘텐츠 좌측선(Screen 패딩 20)과 정렬되도록 통일
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.xs,
   },
   side: {
     minWidth: MIN_TOUCH_SIZE + spacing.sm,

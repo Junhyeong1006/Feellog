@@ -233,34 +233,50 @@ export default function ProfileEditScreen() {
 
       <View style={styles.field}>
         <AppText variant="body2">생년월일</AppText>
+        {/* 단위(년/월/일)를 항상 표시 — 칸 의미가 placeholder에만 있으면 입력 후 사라짐 */}
         <View style={styles.birthRow}>
-          <Input
-            value={year}
-            onChangeText={setYear}
-            placeholder="1965"
-            keyboardType="number-pad"
-            maxLength={4}
-            accessibilityLabel="태어난 연도"
-            style={styles.birthInput}
-          />
-          <Input
-            value={month}
-            onChangeText={setMonth}
-            placeholder="7"
-            keyboardType="number-pad"
-            maxLength={2}
-            accessibilityLabel="태어난 월"
-            style={styles.birthInput}
-          />
-          <Input
-            value={day}
-            onChangeText={setDay}
-            placeholder="4"
-            keyboardType="number-pad"
-            maxLength={2}
-            accessibilityLabel="태어난 일"
-            style={styles.birthInput}
-          />
+          <View style={styles.birthCell}>
+            <Input
+              value={year}
+              onChangeText={setYear}
+              placeholder="1965"
+              keyboardType="number-pad"
+              maxLength={4}
+              accessibilityLabel="태어난 연도"
+              style={styles.birthInput}
+            />
+            <AppText variant="body" muted>
+              년
+            </AppText>
+          </View>
+          <View style={styles.birthCell}>
+            <Input
+              value={month}
+              onChangeText={setMonth}
+              placeholder="7"
+              keyboardType="number-pad"
+              maxLength={2}
+              accessibilityLabel="태어난 월"
+              style={styles.birthInput}
+            />
+            <AppText variant="body" muted>
+              월
+            </AppText>
+          </View>
+          <View style={styles.birthCell}>
+            <Input
+              value={day}
+              onChangeText={setDay}
+              placeholder="4"
+              keyboardType="number-pad"
+              maxLength={2}
+              accessibilityLabel="태어난 일"
+              style={styles.birthInput}
+            />
+            <AppText variant="body" muted>
+              일
+            </AppText>
+          </View>
         </View>
       </View>
 
@@ -340,6 +356,12 @@ const styles = StyleSheet.create({
   birthRow: {
     flexDirection: 'row',
     gap: spacing.md,
+  },
+  birthCell: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
   },
   birthInput: {
     flex: 1,

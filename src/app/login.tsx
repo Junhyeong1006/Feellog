@@ -160,7 +160,7 @@ export default function LoginScreen() {
           {/* 에러 문구 영역 — 에러 유무와 무관하게 높이를 유지해 아래 버튼 위치 고정(220-4657) */}
           <View style={styles.errorZone} accessibilityLiveRegion="polite">
             {error != null && (
-              <AppText variant="small" color={colors.danger} center accessibilityRole="alert">
+              <AppText variant="caption" color={colors.dangerText} center accessibilityRole="alert">
                 {error}
               </AppText>
             )}
@@ -203,8 +203,8 @@ export default function LoginScreen() {
             />
           </View>
 
-          {/* [9] 법적 문구 */}
-          <AppText variant="small" color={colors.textMuted} center style={styles.legal}>
+          {/* [9] 법적 문구 — 시니어 가독: 14px + textSecondary(AA) */}
+          <AppText variant="caption" color={colors.textSecondary} center style={styles.legal}>
             로그인 시{' '}
             <Link href="/legal/terms" style={styles.legalLink}>
               이용약관
@@ -257,7 +257,7 @@ function TextLink({ label, onPress }: { label: string; onPress: () => void }) {
       accessibilityLabel={label}
       style={({ pressed }) => [styles.textLink, pressed && styles.textLinkPressed]}
     >
-      <AppText variant="caption" color={colors.textSecondary}>
+      <AppText variant="body" weight="medium" color={colors.textSecondary}>
         {label}
       </AppText>
     </Pressable>
@@ -268,7 +268,8 @@ function TextLink({ label, onPress }: { label: string; onPress: () => void }) {
 const DECO = {
   circle: { size: 256, top: -79, right: -71 }, // x175 → right -(175+256-360)
   mint: { size: 228, top: 446, right: -60 }, // x192 → right -(192+228-360)
-  coral: { size: 317, top: 271, left: -180 },
+  // 왼쪽으로 더 밀어 '아이디 찾기' 링크(x≈57~) 뒤를 지나지 않게 — 코랄 위 텍스트 2.95:1 AA 미달 해소
+  coral: { size: 317, top: 271, left: -290 },
 } as const;
 
 const styles = StyleSheet.create({
@@ -344,8 +345,10 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
   },
   errorZone: {
-    height: 66, // CTA(y515)↔둘러보기(y581) 사이 — 에러 토스트 y529 자리 고정
+    // 시안은 고정 66이지만 평시 빈 구멍으로 보여 축소 — 에러 시에만 자연 확장
+    minHeight: spacing.xl,
     justifyContent: 'center',
+    paddingVertical: spacing.xs,
   },
   dividerRow: {
     flexDirection: 'row',

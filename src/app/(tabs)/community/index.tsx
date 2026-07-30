@@ -18,11 +18,9 @@ import {
   View,
 } from 'react-native';
 
-import { figmaAssets } from '@/assets/figmaAssets';
 import { CommunityFeedPostCard } from '@/components/community_FeedPostCard';
-import { FeellogLogo } from '@/components/FeellogLogo';
+import { HomeHeader } from '@/components/HomeHeader';
 import { SAMPLE_FRIENDS, SAMPLE_POSTS, type SampleFriend } from '@/data/sampleSocial';
-import { useCart } from '@/hooks/useCollections';
 import { useFontScale } from '@/providers/FontScaleProvider';
 import {
   useLocalComments,
@@ -51,8 +49,7 @@ export default function CommunityScreen() {
   return (
     <Screen edges={['top']} noPadding>
       <View style={styles.header}>
-        <FeellogLogo width={110} />
-        <CartButton />
+        <HomeHeader />
       </View>
 
       <View style={styles.tabsWrap}>
@@ -61,28 +58,6 @@ export default function CommunityScreen() {
 
       {tab === 0 ? <PostsFeed /> : <FriendsList />}
     </Screen>
-  );
-}
-
-/** 헤더 장바구니 원형 버튼(수량 배지) */
-function CartButton() {
-  const { count } = useCart();
-  return (
-    <Pressable
-      onPress={() => router.push('/cart')}
-      accessibilityRole="button"
-      accessibilityLabel={count > 0 ? `장바구니, ${count}개 담김` : '장바구니'}
-      style={({ pressed }) => [styles.cartBtn, pressed && styles.pressedDim]}
-    >
-      <Image source={figmaAssets.icons.cart} style={styles.cartIcon} contentFit="contain" />
-      {count > 0 && (
-        <View style={styles.cartBadge}>
-          <AppText variant="small" weight="bold" color={colors.onPrimary} tabular>
-            {count > 9 ? '9+' : count}
-          </AppText>
-        </View>
-      )}
-    </Pressable>
   );
 }
 
@@ -270,38 +245,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
     paddingBottom: spacing.sm,
-  },
-  cartBtn: {
-    width: MIN_TOUCH_SIZE,
-    height: MIN_TOUCH_SIZE,
-    borderRadius: radius.pill,
-    backgroundColor: colors.surfaceInset,
-    borderWidth: 1,
-    borderColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cartIcon: {
-    width: 20,
-    height: 20,
-  },
-  cartBadge: {
-    position: 'absolute',
-    top: -2,
-    right: -2,
-    minWidth: 20,
-    height: 20,
-    borderRadius: radius.pill,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: spacing.xs,
   },
   tabsWrap: {
     paddingHorizontal: spacing.lg,

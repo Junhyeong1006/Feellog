@@ -19,7 +19,9 @@ cat > dist/serve.json <<'EOF'
 {
   "rewrites": [
     { "source": "/community/compose", "destination": "/community/compose.html" },
+    { "source": "/community/review", "destination": "/community/review.html" },
     { "source": "/activity/*", "destination": "/activity/[id].html" },
+    { "source": "/chat/*", "destination": "/chat/[id].html" },
     { "source": "/community/*", "destination": "/community/[id].html" }
   ]
 }

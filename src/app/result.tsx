@@ -140,29 +140,29 @@ export default function ResultScreen() {
           </AppText>
         )}
 
-        {/* 재테스트 CTA */}
+        {/* 주 CTA — 퍼널 다음 단계(추천)로. 재테스트가 더 크면 위계 역전(감사 확정 건) */}
         <Pressable
-          onPress={onRetest}
+          onPress={() => router.replace('/')}
           accessibilityRole="button"
-          accessibilityLabel="테스트 다시하기"
+          accessibilityLabel="추천 활동 보러 가기"
           style={({ pressed }) => [styles.cta, pressed && styles.ctaPressed]}
         >
           <AppText variant="bodyLg" weight="medium" color={palette.white}>
-            테스트 다시하기
+            추천 활동 보러 가기
           </AppText>
           <Ionicons name="arrow-forward" size={18} color={palette.white} />
         </Pressable>
       </View>
 
-      {/* 추천 보러 가기 — 결과가 실제 추천으로 이어지도록(기능 완결) */}
+      {/* 보조 — 테스트 다시하기(결과 초기화) */}
       <Pressable
-        onPress={() => router.replace('/')}
+        onPress={onRetest}
         accessibilityRole="button"
-        accessibilityLabel="추천 활동 보러 가기"
+        accessibilityLabel="테스트 다시하기"
         style={({ pressed }) => [styles.homeLink, pressed && styles.pressedDim]}
       >
-        <AppText variant="body2" color={palette.white}>
-          추천 활동 보러 가기
+        <AppText variant="bodyLg" color={palette.white}>
+          테스트 다시하기
         </AppText>
       </Pressable>
     </Screen>

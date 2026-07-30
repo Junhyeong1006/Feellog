@@ -156,7 +156,7 @@ export default function OnboardingScreen() {
       }
     >
       <View style={styles.header}>
-        <FeellogLogo width={108} />
+        <FeellogLogo width={106} />
       </View>
 
       <View style={styles.pager} onLayout={onLayout}>

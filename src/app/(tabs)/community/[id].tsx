@@ -76,9 +76,7 @@ export default function PostDetailScreen() {
   if (loading || commentsLoading) {
     return (
       <Screen edges={['top', 'bottom']}>
-        <View style={styles.headerBleed}>
-          <ScreenHeader title="게시글" />
-        </View>
+        <ScreenHeader title="게시글" />
         <View style={styles.center}>
           <ActivityIndicator color={colors.primary} />
         </View>
@@ -89,9 +87,7 @@ export default function PostDetailScreen() {
   if (!post) {
     return (
       <Screen edges={['top', 'bottom']}>
-        <View style={styles.headerBleed}>
-          <ScreenHeader title="게시글" />
-        </View>
+        <ScreenHeader title="게시글" />
         <View style={styles.center}>
           <AppText variant="h3" center>
             글을 찾을 수 없어요
@@ -155,9 +151,7 @@ export default function PostDetailScreen() {
         </View>
       }
     >
-      <View style={styles.headerBleed}>
-        <ScreenHeader title="게시글" />
-      </View>
+      <ScreenHeader title="게시글" />
 
       <CommunityFeedPostCard
         post={post}
@@ -215,9 +209,6 @@ function CommentRow({ comment, first }: { comment: LocalComment; first: boolean 
 }
 
 const styles = StyleSheet.create({
-  headerBleed: {
-    marginHorizontal: -spacing.sm,
-  },
   content: {
     paddingBottom: spacing.xl,
     gap: spacing.base,

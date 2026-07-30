@@ -73,9 +73,7 @@ function SelectStep({
 }) {
   return (
     <Screen edges={['top', 'bottom']} scroll contentStyle={styles.content}>
-      <View style={styles.headerBleed}>
-        <ScreenHeader title="후기쓰기" right={<CloseButton />} />
-      </View>
+      <ScreenHeader title="후기쓰기" right={<CloseButton />} />
 
       <AppText variant="title">완료한 클래스</AppText>
 
@@ -103,7 +101,7 @@ function SelectStep({
         );
       })}
 
-      <AppText variant="caption" muted style={styles.hint}>
+      <AppText variant="body" muted style={styles.hint}>
         기록 탭에서 완료한 클래스를 기록하면 이 목록에 추가돼요.
       </AppText>
     </Screen>
@@ -158,9 +156,7 @@ function WriteStep({
 
   return (
     <Screen edges={['top', 'bottom']} scroll contentStyle={styles.content}>
-      <View style={styles.headerBleed}>
-        <ScreenHeader title="글쓰기" onBack={onBackToSelect} right={<CloseButton />} />
-      </View>
+      <ScreenHeader title="글쓰기" onBack={onBackToSelect} right={<CloseButton />} />
 
       <View style={styles.targetRow}>
         <AppText variant="caption" muted>
@@ -227,9 +223,6 @@ const styles = StyleSheet.create({
   content: {
     paddingBottom: spacing.xl,
     gap: spacing.base,
-  },
-  headerBleed: {
-    marginHorizontal: -spacing.sm,
   },
   classCard: {
     flexDirection: 'row',

@@ -16,6 +16,8 @@ import { AppText } from '@/ui';
 export interface HomeHeaderProps {
   /** 우측 슬롯 — 생략하면 장바구니 버튼(+배지) */
   right?: React.ReactNode;
+  /** 장바구니 버튼 동작 오버라이드(기본: /cart 이동) — 기록 탭의 담기 시트 등 */
+  onCartPress?: () => void;
 }
 
 /** 장바구니 라우트 — 타 화면 소유라 typed routes 생성 전일 수 있어 문자열 캐스트로 이동 */
@@ -24,13 +26,13 @@ const CART_ROUTE = '/cart' as unknown as Href;
 /** 스펙: 카트 버튼 40x40(시각) — hitSlop으로 터치 48 확보 */
 const CART_SIZE = 40;
 
-function CartButton() {
+function CartButton({ onPress }: { onPress?: () => void }) {
   const { count } = useCart();
   const label = count > 0 ? `장바구니, ${count}개 담김` : '장바구니';
 
   return (
     <Pressable
-      onPress={() => router.push(CART_ROUTE)}
+      onPress={onPress ?? (() => router.push(CART_ROUTE))}
       accessibilityRole="button"
       accessibilityLabel={label}
       hitSlop={(48 - CART_SIZE) / 2}
@@ -48,12 +50,12 @@ function CartButton() {
   );
 }
 
-export function HomeHeader({ right }: HomeHeaderProps) {
+export function HomeHeader({ right, onCartPress }: HomeHeaderProps) {
   return (
     <View style={styles.row}>
       {/* 스펙: 로고 106x39 */}
       <FeellogLogo width={106} />
-      {right ?? <CartButton />}
+      {right ?? <CartButton onPress={onCartPress} />}
     </View>
   );
 }

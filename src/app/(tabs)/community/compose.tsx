@@ -87,9 +87,7 @@ export default function ComposeScreen() {
       scroll
       contentStyle={styles.content}
     >
-      <View style={styles.headerBleed}>
-        <ScreenHeader title="글쓰기" right={<CloseButton />} />
-      </View>
+      <ScreenHeader title="글쓰기" right={<CloseButton />} />
 
       <CommunityComposeBodyCard
         value={body}
@@ -182,10 +180,6 @@ const styles = StyleSheet.create({
   content: {
     paddingBottom: spacing.xl,
     gap: spacing.base,
-  },
-  headerBleed: {
-    // Screen 좌우 패딩(20) 안에서 ScreenHeader 자체 패딩(8)을 상쇄
-    marginHorizontal: -spacing.sm,
   },
   sectionCard: {
     backgroundColor: colors.surface,

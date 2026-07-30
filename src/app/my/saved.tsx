@@ -33,9 +33,7 @@ export default function SavedScreen() {
 
   return (
     <Screen scroll edges={['top', 'bottom']} contentStyle={styles.content}>
-      <View style={styles.headerBleed}>
-        <ScreenHeader title="보관함" />
-      </View>
+      <ScreenHeader title="보관함" />
 
       <SegmentedTabs tabs={[...TABS]} activeIndex={activeIndex} onChange={setActiveIndex} />
 
@@ -54,6 +52,7 @@ export default function SavedScreen() {
             label="클래스 둘러보기"
             variant="secondary"
             fullWidth={false}
+            style={styles.emptyCta}
             onPress={() => router.replace('/home' as unknown as Href)}
           />
         </View>
@@ -98,13 +97,14 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xl,
     gap: spacing.base,
   },
-  headerBleed: {
-    marginHorizontal: -spacing.sm,
-  },
   empty: {
     alignItems: 'center',
     gap: spacing.md,
     paddingVertical: spacing.xxxl,
+  },
+  emptyCta: {
+    alignSelf: 'center',
+    marginTop: spacing.xs,
   },
   itemCard: {
     flexDirection: 'row',

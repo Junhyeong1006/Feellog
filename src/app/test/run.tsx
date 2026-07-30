@@ -247,7 +247,8 @@ export default function TestRunScreen() {
             pressed && canNext && styles.nextBtnPressed,
           ]}
         >
-          <AppText variant="titleW" color={palette.white}>
+          {/* 비활성일 때도 '다음 단계' 존재가 읽히게 — 연블루 위 흰 글자(1.2:1) 대신 딥블루 */}
+          <AppText variant="titleW" color={canNext ? palette.white : colors.primaryText}>
             다음으로
           </AppText>
         </Pressable>
@@ -316,6 +317,8 @@ const styles = StyleSheet.create({
   },
   spacerSm: {
     flexGrow: 1,
+    // 질문-선택지가 한 덩어리로 읽히게 간격 상한(긴 화면에서 과도 이격 방지)
+    maxHeight: spacing.huge + spacing.sm,
   },
   spacerLg: {
     flexGrow: 1.4,

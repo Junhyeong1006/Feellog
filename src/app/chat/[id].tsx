@@ -22,7 +22,7 @@ import {
   getLocalChatMessages,
   type LocalChatMessage,
 } from '@/state/localChats';
-import { colors, MIN_TOUCH_SIZE, palette, radius, spacing } from '@/tokens';
+import { colors, MIN_TOUCH_SIZE, palette, radius, spacing, typography } from '@/tokens';
 import { AppText, Button, Input, Screen } from '@/ui';
 
 /** Figma 스펙 고정색(토큰에 없는 실측값 — 스펙 우선 규칙) */
@@ -283,7 +283,11 @@ export default function ChatRoomScreen() {
               draft.trim().length === 0 && styles.sendBtnIdle,
             ]}
           >
-            <Ionicons name="send" size={22} color={colors.primary} />
+            <Ionicons
+              name="send"
+              size={22}
+              color={draft.trim().length === 0 ? colors.primaryText : colors.onPrimary}
+            />
           </Pressable>
         </View>
       </KeyboardAvoidingView>
@@ -451,17 +455,17 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
     borderColor: colors.primary,
     paddingVertical: spacing.sm,
-    fontSize: 14,
+    fontSize: typography.body.fontSize, // 시니어 가독 16 (기존 14)
   },
   sendBtn: {
     width: MIN_TOUCH_SIZE,
     height: MIN_TOUCH_SIZE,
     borderRadius: radius.pill,
-    backgroundColor: colors.primaryTint,
+    backgroundColor: colors.primary, // 활성 = 파랑 채움(댓글 보내기와 통일)
     alignItems: 'center',
     justifyContent: 'center',
   },
   sendBtnIdle: {
-    opacity: 0.5,
+    backgroundColor: colors.primaryTint,
   },
 });

@@ -9,6 +9,7 @@ import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 // NOTE: '@/assets/*'는 tsconfig에서 루트 assets/로 매핑돼 '@/assets/figmaAssets'가
 // 타입 해석에 실패한다(전 화면 공통 이슈). 자체 정합을 위해 상대 경로로 가져온다.
@@ -29,7 +30,7 @@ import {
 } from '@/data/activityDisplay';
 import { useCart, useFavorites, useWishlist } from '@/hooks/useCollections';
 import { track } from '@/lib/analytics';
-import { colors, radius, shadows, spacing } from '@/tokens';
+import { colors, MAX_CONTENT_WIDTH, radius, shadows, spacing } from '@/tokens';
 import { AppText, Button, Card, Chip, Screen, Stars } from '@/ui';
 import { openKakaoMapSearch } from '@/utils/maps';
 
@@ -232,10 +233,12 @@ export default function ActivityDetailScreen() {
   );
 
   return (
-    <Screen scroll footer={footer} contentStyle={styles.content}>
-      <FloatingBack onPress={goBack} />
+    <View style={styles.root}>
+      <Screen scroll footer={footer} contentStyle={styles.content}>
+        {/* 뒤로가기 자리 확보(오버레이가 히어로를 가리지 않게) */}
+        <View style={styles.backSpacer} />
 
-      {/* 히어로 사진 */}
+        {/* 히어로 사진 */}
       <Image
         source={heroSource}
         style={styles.hero}
@@ -344,7 +347,13 @@ export default function ActivityDetailScreen() {
       </View>
 
       <BookingSheet visible={sheetOpen} onClose={() => setSheetOpen(false)} onOpenMap={onOpenMap} />
-    </Screen>
+      </Screen>
+
+      {/* 뒤로가기 — 스크롤과 무관하게 항상 보이는 고정 오버레이(시니어 이탈 방지) */}
+      <SafeAreaView edges={['top']} style={styles.backOverlay} pointerEvents="box-none">
+        <FloatingBack onPress={goBack} />
+      </SafeAreaView>
+    </View>
   );
 }
 
@@ -377,6 +386,22 @@ const BACK_SIZE = 60;
 const CIRCLE_SIZE = 50;
 
 const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+  },
+  backOverlay: {
+    position: 'absolute',
+    top: 0,
+    width: '100%',
+    maxWidth: MAX_CONTENT_WIDTH,
+    alignSelf: 'center',
+    paddingTop: spacing.md,
+    paddingHorizontal: spacing.lg,
+    alignItems: 'flex-start',
+  },
+  backSpacer: {
+    height: BACK_SIZE,
+  },
   content: {
     paddingTop: spacing.md,
     paddingBottom: spacing.xl,

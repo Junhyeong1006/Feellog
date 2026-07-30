@@ -89,7 +89,8 @@ const styles = StyleSheet.create({
   footer: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
-    paddingBottom: spacing.sm,
+    // 웹은 SafeArea 하단 인셋이 0 — 마지막 버튼이 화면 끝에 붙지 않게 여유 확보
+    paddingBottom: spacing.lg,
     gap: spacing.sm,
   },
 });
