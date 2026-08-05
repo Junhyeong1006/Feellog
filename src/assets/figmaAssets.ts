@@ -57,7 +57,6 @@ export const figmaAssets = {
     chatBubble: require('../../assets/figma/icon-chat-bubble.svg'), // 친구 목록 채팅 진입 — 533:1029
     send: require('../../assets/figma/icon-send.svg'), // 채팅 전송 — 559:3704
     location: require('../../assets/figma/icon-location.svg'), // 위치 핀 — 555:1831
-    share: require('../../assets/figma/icon-share.svg'), // 결과 공유 — 334:1293
     bellOff: require('../../assets/figma/icon-bell-off.svg'), // 알림 OFF — 604:1396
     arrowCircle: require('../../assets/figma/icon-arrow-circle.svg'), // 후기쓰기 다음 — 604:1148
   },
@@ -70,9 +69,30 @@ export const figmaAssets = {
   },
 
   photos: {
-    // (26.07 온보딩작업) 성향테스트가 텍스트 카드 2택으로 개편되어 문항 사진 12장은 제거됨
-    /** 결과 화면 캘리그래피 카드 — 334:1260 (ref 19e9a145ca53) */
-    resultCalligraphy: require('../../assets/figma/photos/result-calligraphy.jpg'),
+    // (26.08 온보딩작업 v3) 성향테스트 문항 사진 — 좌측 옵션 카드 A(위)/B(아래), Q11·12는 시안대로 컬러 카드
+    testQ01A: require('../../assets/figma/photos/test-q01-a.jpg'),
+    testQ01B: require('../../assets/figma/photos/test-q01-b.jpg'),
+    testQ02A: require('../../assets/figma/photos/test-q02-a.jpg'),
+    testQ02B: require('../../assets/figma/photos/test-q02-b.jpg'),
+    testQ03A: require('../../assets/figma/photos/test-q03-a.jpg'),
+    testQ03B: require('../../assets/figma/photos/test-q03-b.jpg'),
+    testQ04A: require('../../assets/figma/photos/test-q04-a.jpg'),
+    testQ04B: require('../../assets/figma/photos/test-q04-b.jpg'),
+    testQ05A: require('../../assets/figma/photos/test-q05-a.jpg'),
+    testQ05B: require('../../assets/figma/photos/test-q05-b.jpg'),
+    testQ06A: require('../../assets/figma/photos/test-q06-a.jpg'),
+    testQ06B: require('../../assets/figma/photos/test-q06-b.jpg'),
+    testQ07A: require('../../assets/figma/photos/test-q07-a.jpg'),
+    testQ07B: require('../../assets/figma/photos/test-q07-b.jpg'),
+    testQ08A: require('../../assets/figma/photos/test-q08-a.jpg'),
+    testQ08B: require('../../assets/figma/photos/test-q08-b.jpg'),
+    testQ09A: require('../../assets/figma/photos/test-q09-a.jpg'),
+    testQ09B: require('../../assets/figma/photos/test-q09-b.jpg'),
+    testQ10A: require('../../assets/figma/photos/test-q10-a.jpg'),
+    testQ10B: require('../../assets/figma/photos/test-q10-b.jpg'),
+    /** 결과 유형 일러스트 — 에너지형 전용(675:689), 나머지 5유형 공용 임시(일러 나오면 교체) */
+    resultTypeEnergy: require('../../assets/figma/photos/result-energy.png'),
+    resultTypeGeneric: require('../../assets/figma/photos/result-generic.png'),
     /** 홈 오늘의 하루 픽 카드 썸네일 / 클래스 상세 하단 IMG — ref 3b77284547a9 */
     classThumb: require('../../assets/figma/photos/class-thumb.jpg'),
     /** 검색 결과·기록 탭 추천 카드 공용 사진 — ref ece298d0ec2c */

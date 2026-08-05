@@ -9,7 +9,8 @@ export const QUESTIONS: readonly Question[] = [
     id: 'Q001',
     order: 1,
     axis: 'physical',
-    prompt: '쉬는 날 새로운 활동을 한다면 어느 쪽이 더 끌리나요',
+    // 26.08 온보딩작업 시안(641:1041) 워딩 반영 — CSV 정본 갱신은 todo.md 참고
+    prompt: '쉬는 날, 새로운 활동을 한다면, 어떤 활동을 하고 싶나요',
     choiceA: '마음이 차분해지는 조용한 활동',
     choiceB: '에너지가 생기는 활동적인 활동',
     weight: 1,

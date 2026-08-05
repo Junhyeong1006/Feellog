@@ -18,7 +18,7 @@ export interface SampleFriend {
 
 export const SAMPLE_FRIENDS: SampleFriend[] = [
   { id: 'f1', nickname: '은빛바람', typeLabel: '만능 손재주형', avatar: figmaAssets.photos.avatarFriend1, chatId: 'c1' },
-  { id: 'f2', nickname: '먹물스케치', typeLabel: '감성 충만형', avatar: figmaAssets.photos.avatarFriend2, chatId: 'c2' },
+  { id: 'f2', nickname: '먹물스케치', typeLabel: '감성 풍부형', avatar: figmaAssets.photos.avatarFriend2, chatId: 'c2' },
   { id: 'f3', nickname: '초록산책', typeLabel: '차분한 힐링형', avatar: figmaAssets.photos.avatarFriend3, chatId: 'c3' },
   { id: 'g1', nickname: '도자기 클래스 3반', typeLabel: null, avatar: null, chatId: 'c4', isGroup: true, memberCount: 5 },
 ];
@@ -88,7 +88,7 @@ export const SAMPLE_POSTS: SamplePost[] = [
     id: 'p2',
     authorId: 'f2',
     authorName: '먹물스케치',
-    authorTypeLabel: '감성 충만형',
+    authorTypeLabel: '감성 풍부형',
     avatar: figmaAssets.photos.avatarFriend2,
     timeLabel: '5시간 전',
     categoryLabel: '캘리그래피',

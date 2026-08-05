@@ -35,13 +35,16 @@ const TAB_META: Record<string, { label: string; icon: keyof typeof Ionicons.glyp
 
 function FloatingTabBar({ state, navigation }: TabBarProps) {
   const insets = useSafeAreaInsets();
+  // 시안 675:689 — 결과 화면(숨김 라우트)은 탭바에서 '마이'를 활성으로 표시
+  const focusedName = state.routes[state.index]?.name;
+  const activeName = focusedName === 'result' ? 'my' : focusedName;
   return (
     <View style={[styles.barWrap, { paddingBottom: Math.max(insets.bottom, spacing.sm) }]}>
       <View style={styles.bar}>
-        {state.routes.map((route, index) => {
+        {state.routes.map((route) => {
           const meta = TAB_META[route.name];
           if (!meta) return null;
-          const focused = state.index === index;
+          const focused = route.name === activeName;
           return (
             <Pressable
               key={route.key}
@@ -98,6 +101,8 @@ export default function TabsLayout() {
       <Tabs.Screen name="log" options={{ title: '기록' }} />
       <Tabs.Screen name="community" options={{ title: '소통' }} />
       <Tabs.Screen name="my" options={{ title: '마이' }} />
+      {/* 결과 화면 — 탭 버튼 없이 탭바만 표시(시안 675:689에 탭바 포함) */}
+      <Tabs.Screen name="result" options={{ title: '결과', href: null }} />
     </Tabs>
   );
 }

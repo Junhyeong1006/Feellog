@@ -1,6 +1,7 @@
 /**
  * 6유형 기준 벡터·메타 — docs/planning/activity_type_profiles_ko.csv에서 생성(수정은 CSV에서).
  * 유형 판정 = 사용자/활동 7축 벡터와 기준 벡터의 최근접(classify.ts).
+ * 유형명·설명은 26.08 온보딩작업 시안(Screen/Result)이 정본 — T04·T06 개명, 설명 장문 교체.
  */
 import type { AxisVector, MainType, TypeProfile } from './types';
 
@@ -14,7 +15,7 @@ export const TYPE_PROFILES: Record<MainType, TypeMeta> = {
     id: 'T01',
     label: '활기찬 에너지형',
     subtitle: '액티비티형',
-    description: '몸을 움직이고 생동감 있는 활동을 즐기는 유형',
+    description: '몸을 움직이고 새로운 활력을 얻을 수 있는 활동에 즐거움을 느끼는 유형입니다. 가만히 있기보다는 직접 참여하고 움직이고 활기찬 분위기를 느낄 때 더 만족감을 얻습니다.',
     vector: { physical: 25, relation: 10, experience: 15, satisfaction: 0, value: 0, novelty: 5, depth: 0 },
     categories: ['액티비티', '음악', '라이프스타일'],
   },
@@ -22,7 +23,7 @@ export const TYPE_PROFILES: Record<MainType, TypeMeta> = {
     id: 'T02',
     label: '차분한 힐링형',
     subtitle: '힐링형',
-    description: '조용한 회복과 부담 없는 활동을 선호하는 유형',
+    description: '조용하고 편안한 분위기 속에서 마음을 회복하는 활동을 선호하는 유형입니다. 시끄러운 환경보다는 부담 없이 머물 수 있는 공간에서 천천히 시간을 보내는 걸 좋아합니다. 빠른 결과보다는 과정 속에서 안정감과 여유를 느끼는 편입니다.',
     vector: { physical: -25, relation: -5, experience: 0, satisfaction: -20, value: -10, novelty: 0, depth: 5 },
     categories: ['플라워', '미술', '라이프스타일', '요리'],
   },
@@ -30,15 +31,15 @@ export const TYPE_PROFILES: Record<MainType, TypeMeta> = {
     id: 'T03',
     label: '만능 손재주형',
     subtitle: '공예형',
-    description: '직접 만들고 완성물을 얻을 때 만족하는 유형',
+    description: '직접 만들고 무언가를 완성하는 활동에 만족감을 느끼는 유형입니다. 사소한 차이를 관찰하고 재료를 다루며 자신만의 결과물을 만들어 가는 활동에 즐거움을 느낍니다. 완성된 작품에 성취감과 뿌듯함을 느끼는 편입니다.',
     vector: { physical: -5, relation: 0, experience: 25, satisfaction: 25, value: 5, novelty: 0, depth: 5 },
     categories: ['수공예', '요리', '플라워', '뷰티'],
   },
   T04: {
     id: 'T04',
-    label: '함께하는 동행형',
+    label: '따뜻한 사교형',
     subtitle: '소셜형',
-    description: '다른 사람과 함께할 때 활동을 더 즐기는 유형',
+    description: '혼자 하는 활동보다 사람들과 함께 배우고 대화할 때 더 큰 즐거움을 느끼는 유형입니다. 활동 자체도 좋지만 그 과정 속 나누는 이야기와 관계, 함께 웃는 시간이 중요한 의미를 가집니다. 새로운 사람과 자연스럽게 어울릴 수 있는 분위기에 만족합니다.',
     vector: { physical: 0, relation: 25, experience: 5, satisfaction: -5, value: -5, novelty: 0, depth: -5 },
     categories: ['액티비티', '요리', '음악', '라이프스타일'],
   },
@@ -46,15 +47,15 @@ export const TYPE_PROFILES: Record<MainType, TypeMeta> = {
     id: 'T05',
     label: '배움의 즐거움형',
     subtitle: '배움형',
-    description: '꾸준히 배우고 실생활에 활용할 수 있는 기술을 즐기는 유형',
+    description: '새로운 것을 알아가고 배우는 과정에서 즐거움과 활력을 느끼는 유형입니다. 단순히 한 번으로 끝이 아닌, 시간이 지날수록 익숙해지고 실력을 쌓아가는 활동에 흥미를 느낍니다. 새로운 지식이나 기술을 배우며 스스로 발전하는 것을 좋아합니다.',
     vector: { physical: 0, relation: 0, experience: 10, satisfaction: 10, value: 20, novelty: 0, depth: 25 },
     categories: ['정규', '음악', '라이프스타일', '요리'],
   },
   T06: {
     id: 'T06',
-    label: '감성 충만형',
+    label: '감성 풍부형',
     subtitle: '감성형',
-    description: '취향과 분위기와 아름다움과 감성적 자극을 추구하는 유형',
+    description: '감각적인 요소에서 즐거움을 느끼는 유형입니다. 활동을 선택할 때 실용성만큼 그 공간의 분위기, 결과의 아름다움, 체험 후 남는 감성적 만족을 중요하게 여깁니다. 자신만의 취향을 발견하고 표현할 수 있는 활동을 선호합니다.',
     vector: { physical: -10, relation: 0, experience: -10, satisfaction: -10, value: -25, novelty: 5, depth: 0 },
     categories: ['미술', '플라워', '뷰티', '음악', '라이프스타일'],
   },
